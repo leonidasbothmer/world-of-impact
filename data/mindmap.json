@@ -1,0 +1,217 @@
+{
+  "nodes": [
+    {
+      "id": "climate-change",
+      "name": "Climate change and adaptation",
+      "type": "problem",
+      "notes": "Core impact area — mitigation and adaptation across sectors.",
+      "tags": ["climate", "impact"],
+      "position": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "energy-transformation",
+      "name": "Energy transformation",
+      "type": "problem",
+      "notes": "Transition to clean, resilient energy systems.",
+      "tags": ["energy", "climate"],
+      "position": { "x": 280, "y": -120 }
+    },
+    {
+      "id": "buildings",
+      "name": "Buildings",
+      "type": "solution",
+      "notes": "Decarbonizing the built environment — efficiency, electrification, retrofit.",
+      "tags": ["buildings", "sector"],
+      "position": { "x": 280, "y": 120 }
+    },
+    {
+      "id": "electricity",
+      "name": "Electricity",
+      "type": "solution",
+      "notes": "Grid, renewables, and building electrification.",
+      "tags": ["energy", "buildings"],
+      "position": { "x": 520, "y": 60 }
+    },
+    {
+      "id": "heating",
+      "name": "Heating",
+      "type": "solution",
+      "notes": "Heat pumps, district heat, and thermal efficiency.",
+      "tags": ["energy", "buildings"],
+      "position": { "x": 520, "y": 180 }
+    },
+    {
+      "id": "urban-development",
+      "name": "Urban development",
+      "type": "problem",
+      "notes": "Sustainable cities, mobility, and civic infrastructure.",
+      "tags": ["cities", "urban"],
+      "position": { "x": -280, "y": 120 }
+    },
+    {
+      "id": "finance",
+      "name": "Finance",
+      "type": "problem",
+      "notes": "Capital allocation for impact — green finance, impact investing.",
+      "tags": ["finance", "sector"],
+      "position": { "x": -280, "y": -120 }
+    },
+    {
+      "id": "health",
+      "name": "Health",
+      "type": "problem",
+      "notes": "Healthcare delivery, aging populations, and digital health.",
+      "tags": ["health", "sector"],
+      "position": { "x": -520, "y": 0 }
+    },
+    {
+      "id": "dark-matter-labs",
+      "name": "Dark Matter Labs",
+      "type": "organization",
+      "notes": "Urban innovation lab — systemic change in cities.",
+      "tags": ["urban", "lab"],
+      "orgKind": "NGO",
+      "website": "https://darkmatterlabs.org",
+      "position": { "x": -480, "y": 220 }
+    },
+    {
+      "id": "autarc",
+      "name": "Autarc",
+      "type": "organization",
+      "notes": "Heat pump and building decarbonization software.",
+      "tags": ["startup", "heating", "buildings"],
+      "orgKind": "startup",
+      "website": "https://autarc.energy",
+      "position": { "x": 760, "y": 100 }
+    },
+    {
+      "id": "reonic",
+      "name": "Reonic",
+      "type": "organization",
+      "notes": "Energy management and building optimization.",
+      "tags": ["startup", "buildings", "energy"],
+      "orgKind": "startup",
+      "website": "https://reonic.com",
+      "position": { "x": 760, "y": 240 }
+    },
+    {
+      "id": "voize",
+      "name": "Voize",
+      "type": "organization",
+      "notes": "Voice AI for care documentation in healthcare.",
+      "tags": ["startup", "health"],
+      "orgKind": "startup",
+      "website": "https://voize.de",
+      "position": { "x": -760, "y": -80 }
+    },
+    {
+      "id": "praxipal",
+      "name": "Praxipal",
+      "type": "organization",
+      "notes": "Digital health platform for practices and patients.",
+      "tags": ["startup", "health"],
+      "orgKind": "scaleup",
+      "website": "https://praxipal.com",
+      "position": { "x": -760, "y": 80 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-climate-energy",
+      "source": "climate-change",
+      "target": "energy-transformation",
+      "label": "drives"
+    },
+    {
+      "id": "e-climate-buildings",
+      "source": "climate-change",
+      "target": "buildings",
+      "label": "requires"
+    },
+    {
+      "id": "e-climate-urban",
+      "source": "climate-change",
+      "target": "urban-development",
+      "label": "affects"
+    },
+    {
+      "id": "e-energy-electricity",
+      "source": "energy-transformation",
+      "target": "electricity",
+      "label": "includes"
+    },
+    {
+      "id": "e-energy-heating",
+      "source": "energy-transformation",
+      "target": "heating",
+      "label": "includes"
+    },
+    {
+      "id": "e-buildings-electricity",
+      "source": "buildings",
+      "target": "electricity",
+      "label": "needs"
+    },
+    {
+      "id": "e-buildings-heating",
+      "source": "buildings",
+      "target": "heating",
+      "label": "needs"
+    },
+    {
+      "id": "e-urban-buildings",
+      "source": "urban-development",
+      "target": "buildings",
+      "label": "shapes"
+    },
+    {
+      "id": "e-dml-urban",
+      "source": "dark-matter-labs",
+      "target": "urban-development",
+      "label": "works on"
+    },
+    {
+      "id": "e-autarc-buildings",
+      "source": "autarc",
+      "target": "buildings",
+      "label": "serves"
+    },
+    {
+      "id": "e-autarc-heating",
+      "source": "autarc",
+      "target": "heating",
+      "label": "focus"
+    },
+    {
+      "id": "e-reonic-buildings",
+      "source": "reonic",
+      "target": "buildings",
+      "label": "serves"
+    },
+    {
+      "id": "e-reonic-energy",
+      "source": "reonic",
+      "target": "energy-transformation",
+      "label": "enables"
+    },
+    {
+      "id": "e-voize-health",
+      "source": "voize",
+      "target": "health",
+      "label": "serves"
+    },
+    {
+      "id": "e-praxipal-health",
+      "source": "praxipal",
+      "target": "health",
+      "label": "serves"
+    },
+    {
+      "id": "e-finance-climate",
+      "source": "finance",
+      "target": "climate-change",
+      "label": "funds"
+    }
+  ],
+  "updatedAt": "2026-09-14T08:00:00.000Z"
+}
