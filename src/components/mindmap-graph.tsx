@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  useNodesState,
+  useEdgesState,
   type Node,
   type Edge,
-  type OnNodesChange,
-  type OnEdgesChange,
   type OnConnect,
-  applyNodeChanges,
-  applyEdgeChanges,
+  type OnNodeDrag,
   ConnectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -57,56 +56,102 @@ function toFlowEdges(edges: MindMapData["edges"]): Edge[] {
   }));
 }
 
+function flowSignature(data: MindMapData): string {
+  return `${data.updatedAt ?? ""}|${data.nodes.length}|${data.edges.length}|${data.nodes
+    .map((n) => n.id)
+    .join(",")}|${data.edges.map((e) => e.id).join(",")}`;
+}
+
 export function MindMapGraph({
   data,
   selectedNodeId,
   onSelectNode,
   onDataChange,
 }: MindMapGraphProps) {
-  const flowNodes = useMemo(
-    () => toFlowNodes(data.nodes, selectedNodeId),
-    [data.nodes, selectedNodeId],
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    toFlowNodes(data.nodes, selectedNodeId),
   );
-  const flowEdges = useMemo(() => toFlowEdges(data.edges), [data.edges]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(data.edges));
+  const syncedSig = useRef(flowSignature(data));
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
-  const onNodesChange: OnNodesChange = useCallback(
-    (changes) => {
-      const nextNodes = applyNodeChanges(changes, flowNodes);
-      const updated = data.nodes.map((node) => {
+  // Sync from parent when node/edge identity set changes (CRUD), not on every drag tick.
+  useEffect(() => {
+    const sig = flowSignature(data);
+    if (sig === syncedSig.current) {
+      setNodes((current) =>
+        current.map((n) => ({
+          ...n,
+          selected: n.id === selectedNodeId,
+          data: {
+            node:
+              data.nodes.find((dn) => dn.id === n.id) ??
+              (n.data as { node: MindMapNode }).node,
+          },
+        })),
+      );
+      return;
+    }
+    syncedSig.current = sig;
+    setNodes(toFlowNodes(data.nodes, selectedNodeId));
+    setEdges(toFlowEdges(data.edges));
+  }, [data, selectedNodeId, setNodes, setEdges]);
+
+  const persistPositions = useCallback(
+    (nextNodes: Node[]) => {
+      const current = dataRef.current;
+      const updated = current.nodes.map((node) => {
         const flowNode = nextNodes.find((n) => n.id === node.id);
         if (!flowNode) return node;
         return { ...node, position: flowNode.position };
       });
-      onDataChange({ ...data, nodes: updated });
+      const next = { ...current, nodes: updated };
+      syncedSig.current = flowSignature(next);
+      onDataChange(next);
     },
-    [data, flowNodes, onDataChange],
+    [onDataChange],
   );
 
-  const onEdgesChange: OnEdgesChange = useCallback(
-    (changes) => {
-      const nextEdges = applyEdgeChanges(changes, flowEdges);
-      const updatedEdges = nextEdges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: typeof e.label === "string" ? e.label : undefined,
-      }));
-      onDataChange({ ...data, edges: updatedEdges });
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_event, _node, nextNodes) => {
+      persistPositions(nextNodes);
     },
-    [data, flowEdges, onDataChange],
+    [persistPositions],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
       if (!connection.source || !connection.target) return;
+      const current = dataRef.current;
       const newEdge = {
         id: `e-${connection.source}-${connection.target}-${Date.now()}`,
         source: connection.source,
         target: connection.target,
       };
-      onDataChange({ ...data, edges: [...data.edges, newEdge] });
+      const next = { ...current, edges: [...current.edges, newEdge] };
+      syncedSig.current = flowSignature(next);
+      setEdges(toFlowEdges(next.edges));
+      onDataChange(next);
     },
-    [data, onDataChange],
+    [onDataChange, setEdges],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: Parameters<typeof onEdgesChange>[0]) => {
+      onEdgesChange(changes);
+      const removes = changes.filter((c) => c.type === "remove");
+      if (removes.length === 0) return;
+      const removedIds = new Set(removes.map((c) => c.id));
+      const current = dataRef.current;
+      const next = {
+        ...current,
+        edges: current.edges.filter((e) => !removedIds.has(e.id)),
+      };
+      syncedSig.current = flowSignature(next);
+      onDataChange(next);
+    },
+    [onEdgesChange, onDataChange],
   );
 
   const onNodeClick = useCallback(
@@ -123,13 +168,14 @@ export function MindMapGraph({
   return (
     <div className="h-full w-full">
       <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
+        nodes={nodes}
+        edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
         connectionMode={ConnectionMode.Loose}
         fitView

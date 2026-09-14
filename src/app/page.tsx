@@ -1,9 +1,14 @@
 import { MindMapApp } from "@/components/mindmap-app";
+import { readMindMap } from "@/lib/mindmap-store";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const initialData = await readMindMap();
+
   return (
     <div className="h-dvh overflow-hidden">
-      <MindMapApp />
+      <MindMapApp initialData={initialData} />
     </div>
   );
 }

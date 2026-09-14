@@ -1,7 +1,7 @@
 import type { MindMapAction, MindMapData } from "@/types/mindmap";
 
 export async function fetchMindMap(): Promise<MindMapData> {
-  const res = await fetch("/api/mindmap");
+  const res = await fetch("/api/mindmap", { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to load mind map");
   return res.json();
 }

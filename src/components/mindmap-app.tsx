@@ -16,10 +16,14 @@ import {
 } from "@/lib/mindmap-client";
 import type { MindMapData, MindMapNode, NodeType } from "@/types/mindmap";
 
-export function MindMapApp() {
-  const [data, setData] = useState<MindMapData | null>(null);
+type MindMapAppProps = {
+  initialData?: MindMapData | null;
+};
+
+export function MindMapApp({ initialData = null }: MindMapAppProps) {
+  const [data, setData] = useState<MindMapData | null>(initialData);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -27,11 +31,26 @@ export function MindMapApp() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     fetchMindMap()
-      .then(setData)
-      .catch(() => setError("Could not load mind map. Is the dev server running?"))
-      .finally(() => setLoading(false));
-  }, []);
+      .then((next) => {
+        if (!cancelled) {
+          setData(next);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !initialData) {
+          setError("Could not load mind map. Is the dev server running?");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialData]);
 
   const persist = useCallback(async (next: MindMapData) => {
     setSaving(true);
