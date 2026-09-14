@@ -1,4 +1,6 @@
-# Impact Mind Map
+# World of Impact
+
+Impact Mind Map — purpose-driven job-search graph.
 
 A purpose-driven job-search mind map for **Leonidas Bothmer**. Explore impact areas, organizations, and relationships as an interactive graph network.
 
