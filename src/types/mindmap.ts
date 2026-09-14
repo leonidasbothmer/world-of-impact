@@ -12,6 +12,11 @@ export interface MindMapNode {
   notes?: string;
   tags?: string[];
   position: NodePosition;
+  /**
+   * When true, d3-force keeps this node fixed at `position` (fx/fy).
+   * Pin UI not shipped yet — field is ready for drag-to-pin later.
+   */
+  pinned?: boolean;
   /** Organization fields */
   orgEmail?: string;
   website?: string;
@@ -20,7 +25,10 @@ export interface MindMapNode {
   /** Person fields */
   phone?: string;
   email?: string;
-  /** Local or remote avatar URL shown inside circular person nodes */
+  /**
+   * Avatar (person) or logo (org). Prefer remote LinkedIn/OG URLs by reference;
+   * do not download into public/. Local placeholders OK as fallback.
+   */
   imageUrl?: string;
 }
 

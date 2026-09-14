@@ -5,159 +5,368 @@
       "name": "Climate change and adaptation",
       "type": "problem",
       "notes": "Core impact area — mitigation and adaptation across sectors.",
-      "tags": ["climate", "impact"],
-      "position": { "x": 0, "y": 0 }
+      "tags": [
+        "climate",
+        "impact"
+      ],
+      "position": {
+        "x": 342.0412639556726,
+        "y": -37.41430668506038
+      }
     },
     {
       "id": "energy-transformation",
       "name": "Energy transformation",
       "type": "problem",
       "notes": "Transition to clean, resilient energy systems.",
-      "tags": ["energy", "climate"],
-      "position": { "x": 280, "y": -120 }
+      "tags": [
+        "energy",
+        "climate"
+      ],
+      "position": {
+        "x": 448.76769234831664,
+        "y": 81.38934018087984
+      }
     },
     {
       "id": "buildings",
       "name": "Buildings",
       "type": "solution",
       "notes": "Decarbonizing the built environment — efficiency, electrification, retrofit.",
-      "tags": ["buildings", "sector"],
-      "position": { "x": 280, "y": 120 }
+      "tags": [
+        "buildings",
+        "sector"
+      ],
+      "position": {
+        "x": 341.9355817121684,
+        "y": 114.96526515107516
+      }
     },
     {
       "id": "electricity",
       "name": "Electricity",
       "type": "solution",
       "notes": "Grid, renewables, and building electrification.",
-      "tags": ["energy", "buildings"],
-      "position": { "x": 520, "y": 60 }
+      "tags": [
+        "energy",
+        "buildings"
+      ],
+      "position": {
+        "x": 475.3506229909727,
+        "y": -31.36756385139603
+      }
     },
     {
       "id": "heating",
       "name": "Heating",
       "type": "solution",
       "notes": "Heat pumps, district heat, and thermal efficiency.",
-      "tags": ["energy", "buildings"],
-      "position": { "x": 520, "y": 180 }
+      "tags": [
+        "energy",
+        "buildings"
+      ],
+      "position": {
+        "x": 389.86204496270136,
+        "y": 244.53504091627087
+      }
     },
     {
       "id": "urban-development",
       "name": "Urban development",
       "type": "problem",
       "notes": "Sustainable cities, mobility, and civic infrastructure.",
-      "tags": ["cities", "urban"],
-      "position": { "x": -280, "y": 120 }
+      "tags": [
+        "cities",
+        "urban"
+      ],
+      "position": {
+        "x": 160.6821771529174,
+        "y": 73.99540504816504
+      }
     },
     {
       "id": "finance",
       "name": "Finance",
       "type": "problem",
       "notes": "Capital allocation for impact — green finance, impact investing.",
-      "tags": ["finance", "sector"],
-      "position": { "x": -280, "y": -120 }
+      "tags": [
+        "finance",
+        "sector"
+      ],
+      "position": {
+        "x": 419.39702580388246,
+        "y": -199.18630837374087
+      }
     },
     {
       "id": "health",
       "name": "Health",
       "type": "problem",
       "notes": "Healthcare delivery, aging populations, and digital health.",
-      "tags": ["health", "sector"],
-      "position": { "x": -520, "y": 0 }
+      "tags": [
+        "health",
+        "sector"
+      ],
+      "position": {
+        "x": -1248.6417647928133,
+        "y": -394.06279779872966
+      }
     },
     {
       "id": "dark-matter-labs",
       "name": "Dark Matter Labs",
       "type": "organization",
       "notes": "Urban innovation lab — systemic change in cities.",
-      "tags": ["urban", "lab"],
+      "tags": [
+        "urban",
+        "lab"
+      ],
       "orgKind": "NGO",
       "website": "https://darkmatterlabs.org",
-      "position": { "x": -480, "y": 220 }
+      "position": {
+        "x": -30.009275392098633,
+        "y": 134.521290301799
+      }
     },
     {
       "id": "autarc",
       "name": "Autarc",
       "type": "organization",
       "notes": "Heat pump and building decarbonization software.",
-      "tags": ["startup", "heating", "buildings"],
+      "tags": [
+        "startup",
+        "heating",
+        "buildings"
+      ],
       "orgKind": "startup",
       "website": "https://autarc.energy",
-      "position": { "x": 760, "y": 100 }
+      "position": {
+        "x": 544.2123114991114,
+        "y": 139.95883436363235
+      }
     },
     {
       "id": "reonic",
       "name": "Reonic",
       "type": "organization",
       "notes": "Energy management and building optimization.",
-      "tags": ["startup", "buildings", "energy"],
+      "tags": [
+        "startup",
+        "buildings",
+        "energy"
+      ],
       "orgKind": "startup",
       "website": "https://reonic.com",
-      "position": { "x": 760, "y": 240 }
+      "position": {
+        "x": 501.8430325321385,
+        "y": 243.626287321996
+      }
     },
     {
       "id": "voize",
       "name": "Voize",
       "type": "organization",
       "notes": "Voice AI for care documentation in healthcare.",
-      "tags": ["startup", "health"],
+      "tags": [
+        "startup",
+        "health"
+      ],
       "orgKind": "startup",
       "website": "https://voize.de",
-      "position": { "x": -760, "y": -80 }
+      "position": {
+        "x": -1255.1565439059902,
+        "y": -546.5135174871069
+      }
     },
     {
       "id": "praxipal",
       "name": "Praxipal",
       "type": "organization",
       "notes": "Digital health platform for practices and patients.",
-      "tags": ["startup", "health"],
+      "tags": [
+        "startup",
+        "health"
+      ],
       "orgKind": "scaleup",
       "website": "https://praxipal.com",
-      "position": { "x": -760, "y": 80 }
+      "position": {
+        "x": -1298.6618238979331,
+        "y": -249.4386204395579
+      }
     },
     {
       "id": "aleksander-nowak",
       "name": "Aleksander Nowak",
       "type": "person",
-      "notes": "Contact linked to Dark Matter Labs and Nancy Birkhölzer. LinkedIn profile image is not scraped (auth/CDN); using a local placeholder avatar in public/avatars/.",
-      "tags": ["contact", "urban"],
+      "notes": "Contact linked to Dark Matter Labs and Nancy Birkhölzer. LinkedIn OG image unavailable without auth; local placeholder avatar used.",
+      "tags": [
+        "contact",
+        "urban"
+      ],
       "linkedIn": "https://www.linkedin.com/in/aleksander-nowak-008b9357/",
       "imageUrl": "/avatars/aleksander-nowak.svg",
-      "position": { "x": -640, "y": 340 }
+      "position": {
+        "x": -104.54625581681907,
+        "y": 290.61504843190465
+      },
+      "pinned": false
     },
     {
       "id": "nancy-birkholzer",
       "name": "Nancy Birkhölzer",
       "type": "person",
-      "notes": "Entrepreneur / design & innovation leader; connected to Dream Mobility. Spelling on LinkedIn is Birkhölzer (ö). Avatar is a local placeholder — LinkedIn CDN not scraped.",
-      "tags": ["contact", "mobility", "innovation"],
+      "notes": "Entrepreneur / design & innovation leader; connected to Dream Mobility. Spelling on LinkedIn is Birkhölzer (ö). Avatar is remote LinkedIn OG image (hotlink by reference).",
+      "tags": [
+        "contact",
+        "mobility",
+        "innovation",
+        "contacted"
+      ],
       "linkedIn": "https://www.linkedin.com/in/nancyb1",
-      "imageUrl": "/avatars/nancy-birkholzer.svg",
-      "position": { "x": -320, "y": 360 }
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E03AQE96u5SVzIVqw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1726557378134?e=2147483647&v=beta&t=31sgt42Pdu1tQ0E3MMVF8riaOsX0P01mDyPOA8kOYUM",
+      "position": {
+        "x": 61.14944599641328,
+        "y": 297.8550615994512
+      }
     },
     {
       "id": "dream-mobility",
       "name": "Dream Mobility",
       "type": "organization",
       "notes": "Berlin-based mobility venture (dream Mobility GmbH) focused on passenger night-train and related mobility services. No public marketing website listed in lobby register (n/a); contact domain dreammobility.eu.",
-      "tags": ["mobility", "startup"],
+      "tags": [
+        "mobility",
+        "startup"
+      ],
       "orgKind": "startup",
-      "position": { "x": -120, "y": 320 }
+      "position": {
+        "x": 190.40701068446813,
+        "y": 356.0620579086744
+      }
     },
     {
       "id": "open-mobility",
       "name": "Open Mobility",
       "type": "problem",
       "notes": "Domain/problem space around open, shared, and climate-aligned mobility systems.",
-      "tags": ["mobility", "climate", "domain"],
-      "position": { "x": 80, "y": 220 }
+      "tags": [
+        "mobility",
+        "climate",
+        "domain"
+      ],
+      "position": {
+        "x": 220.08752421851833,
+        "y": 168.93765158080524
+      }
     },
     {
       "id": "resilient-cities",
       "name": "Resilient Cities",
       "type": "problem",
       "notes": "Urban resilience — adapting cities to climate risk, infrastructure stress, and social systems under change.",
-      "tags": ["cities", "climate", "adaptation"],
-      "position": { "x": -140, "y": 40 }
+      "tags": [
+        "cities",
+        "climate",
+        "adaptation"
+      ],
+      "position": {
+        "x": 165.44731332142157,
+        "y": -100.63694712137776
+      }
+    },
+    {
+      "id": "open-systems-lab",
+      "name": "Open Systems Lab",
+      "type": "organization",
+      "notes": "Non-profit R&D lab redesigning societal operating systems (WikiHouse, PlanX, Fairhold, BuildX). See https://www.opensystemslab.io/about",
+      "tags": [
+        "urban",
+        "lab",
+        "open-source",
+        "construction"
+      ],
+      "orgKind": "NGO",
+      "website": "https://www.opensystemslab.io/",
+      "linkedIn": "https://www.linkedin.com/company/open-systems-lab",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFzsOCG6-357Q/company-logo_200_200/company-logo_200_200/0/1662483549293/open_systems_lab_logo?e=2147483647&v=beta&t=uToRt4XKLkJK-aSXyAExJe_osePhhiSWrGqA1aUQQNM",
+      "pinned": false,
+      "position": {
+        "x": 233.12879523074326,
+        "y": -11.406972551346856
+      }
+    },
+    {
+      "id": "simon-hoeher",
+      "name": "Simon Hoeher",
+      "type": "person",
+      "notes": "Contact connected to Dark Matter Labs. Avatar remote LinkedIn OG image (hotlink).",
+      "tags": [
+        "contacted",
+        "contact",
+        "urban"
+      ],
+      "linkedIn": "https://www.linkedin.com/in/simonhoeher/",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E03AQGUdpfvAoaA9A/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1685194034317?e=2147483647&v=beta&t=SbhxbNe-6Q-Mn4t1hwiib5sw7OUctSciFjRuwg9hL_Q",
+      "pinned": false,
+      "position": {
+        "x": -205.9738234910041,
+        "y": 134.74210119949473
+      }
+    },
+    {
+      "id": "manuel-kilian",
+      "name": "Manuel Kilian",
+      "type": "person",
+      "notes": "GovTech / digital government (GovMind, Global Government Technology Centre). Avatar remote LinkedIn OG image (hotlink).",
+      "tags": [
+        "contact",
+        "govtech"
+      ],
+      "linkedIn": "https://www.linkedin.com/in/manuelkilian",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D03AQESt1fUtkcl4Q/profile-displayphoto-scale_200_200/B4DaBzacR2KkAg-/0/1788642708075?e=2147483647&v=beta&t=7BypjND40tyBpwp6IcLGhI5iTZmZgUFnai8-SRYF0eg",
+      "pinned": false,
+      "position": {
+        "x": -820.6686121089349,
+        "y": -118.06220499506823
+      }
+    },
+    {
+      "id": "rene-schaefer",
+      "name": "René Schäfer",
+      "type": "person",
+      "notes": "Co-founder of Nature Wealth (nature finance / biodiversity). Avatar remote LinkedIn OG image (hotlink).",
+      "tags": [
+        "contacted",
+        "contact",
+        "nature-finance"
+      ],
+      "linkedIn": "https://www.linkedin.com/in/rene-schaefer",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/C4E03AQEvqQRdBVtUnw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1661458019946?e=2147483647&v=beta&t=FS4kgK08Veqx-4oBflU0Mqq_WB0keB7cAuoGgut_z94",
+      "pinned": false,
+      "position": {
+        "x": 189.61966998914332,
+        "y": -373.2247049442474
+      }
+    },
+    {
+      "id": "nature-wealth",
+      "name": "Nature Wealth",
+      "type": "organization",
+      "notes": "Non-profit foundation for high-integrity biodiversity credit development and nature finance strategies.",
+      "tags": [
+        "nature",
+        "finance",
+        "biodiversity"
+      ],
+      "orgKind": "NGO",
+      "website": "https://nature-wealth.org/",
+      "linkedIn": "https://www.linkedin.com/company/nature-wealth",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQGi1Bl1A0sHKg/company-logo_200_200/B4DZeCkQl2HAAI-/0/1750242233132/nature_wealth_logo?e=2147483647&v=beta&t=cfGTCe26PgOyXJqHnQp_BshpZPc7MwktU-OqjmAylnc",
+      "pinned": false,
+      "position": {
+        "x": 281.0001787531117,
+        "y": -219.83179412880992
+      }
     }
   ],
   "edges": [
@@ -304,7 +513,43 @@
       "source": "nancy-birkholzer",
       "target": "open-mobility",
       "label": "interested in"
+    },
+    {
+      "id": "e-simon-dml",
+      "source": "simon-hoeher",
+      "target": "dark-matter-labs",
+      "label": "connected to"
+    },
+    {
+      "id": "e-rene-nature-wealth",
+      "source": "rene-schaefer",
+      "target": "nature-wealth",
+      "label": "co-founded"
+    },
+    {
+      "id": "e-nature-wealth-finance",
+      "source": "nature-wealth",
+      "target": "finance",
+      "label": "works on"
+    },
+    {
+      "id": "e-nature-wealth-climate",
+      "source": "nature-wealth",
+      "target": "climate-change",
+      "label": "addresses"
+    },
+    {
+      "id": "e-osl-urban",
+      "source": "open-systems-lab",
+      "target": "urban-development",
+      "label": "works on"
+    },
+    {
+      "id": "e-osl-buildings",
+      "source": "open-systems-lab",
+      "target": "buildings",
+      "label": "enables"
     }
   ],
-  "updatedAt": "2026-09-14T08:50:00.000Z"
+  "updatedAt": "2026-09-14T10:02:48.104Z"
 }

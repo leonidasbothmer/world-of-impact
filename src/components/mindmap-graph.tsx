@@ -8,6 +8,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Node,
   type Edge,
   type OnConnect,
@@ -16,6 +17,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { MindMapFlowNode } from "@/components/mindmap-node";
+import { useForceLayout } from "@/lib/use-force-layout";
 import type { MindMapData, MindMapNode, NodeType } from "@/types/mindmap";
 
 const nodeTypes = { mindmap: MindMapFlowNode };
@@ -62,7 +64,7 @@ function flowSignature(data: MindMapData): string {
     .join(",")}|${data.edges.map((e) => e.id).join(",")}`;
 }
 
-export function MindMapGraph({
+function MindMapGraphInner({
   data,
   selectedNodeId,
   onSelectNode,
@@ -75,6 +77,44 @@ export function MindMapGraph({
   const syncedSig = useRef(flowSignature(data));
   const dataRef = useRef(data);
   dataRef.current = data;
+  const { fitView } = useReactFlow();
+  const didFitRef = useRef(false);
+
+  const persistPositions = useCallback(
+    (positions: Record<string, { x: number; y: number }>) => {
+      const current = dataRef.current;
+      let changed = false;
+      const updated = current.nodes.map((node) => {
+        const pos = positions[node.id];
+        if (!pos) return node;
+        if (
+          Math.abs(pos.x - node.position.x) < 0.5 &&
+          Math.abs(pos.y - node.position.y) < 0.5
+        ) {
+          return node;
+        }
+        changed = true;
+        return { ...node, position: { x: pos.x, y: pos.y } };
+      });
+      if (!changed) return;
+      const next = { ...current, nodes: updated };
+      syncedSig.current = flowSignature(next);
+      onDataChange(next);
+    },
+    [onDataChange],
+  );
+
+  const force = useForceLayout({
+    data,
+    setNodes,
+    onSettled: (positions) => {
+      persistPositions(positions);
+      if (!didFitRef.current) {
+        didFitRef.current = true;
+        requestAnimationFrame(() => fitView({ padding: 0.2, duration: 400 }));
+      }
+    },
+  });
 
   // Sync from parent when node/edge identity set changes (CRUD), not on every drag tick.
   useEffect(() => {
@@ -94,30 +134,36 @@ export function MindMapGraph({
       return;
     }
     syncedSig.current = sig;
+    didFitRef.current = false;
     setNodes(toFlowNodes(data.nodes, selectedNodeId));
     setEdges(toFlowEdges(data.edges));
   }, [data, selectedNodeId, setNodes, setEdges]);
 
-  const persistPositions = useCallback(
-    (nextNodes: Node[]) => {
-      const current = dataRef.current;
-      const updated = current.nodes.map((node) => {
-        const flowNode = nextNodes.find((n) => n.id === node.id);
-        if (!flowNode) return node;
-        return { ...node, position: flowNode.position };
-      });
-      const next = { ...current, nodes: updated };
-      syncedSig.current = flowSignature(next);
-      onDataChange(next);
+  const onNodeDragStart: OnNodeDrag = useCallback(
+    (_event, node) => {
+      force.fixNode(node.id, node.position.x, node.position.y);
     },
-    [onDataChange],
+    [force],
+  );
+
+  const onNodeDrag: OnNodeDrag = useCallback(
+    (_event, node) => {
+      force.dragNode(node.id, node.position.x, node.position.y);
+    },
+    [force],
   );
 
   const onNodeDragStop: OnNodeDrag = useCallback(
-    (_event, _node, nextNodes) => {
-      persistPositions(nextNodes);
+    (_event, node, nextNodes) => {
+      const source = dataRef.current.nodes.find((n) => n.id === node.id);
+      force.releaseNode(node.id, source?.pinned);
+      const positions: Record<string, { x: number; y: number }> = {};
+      for (const n of nextNodes) {
+        positions[n.id] = n.position;
+      }
+      persistPositions(positions);
     },
-    [persistPositions],
+    [force, persistPositions],
   );
 
   const onConnect: OnConnect = useCallback(
@@ -175,6 +221,8 @@ export function MindMapGraph({
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
         connectionMode={ConnectionMode.Loose}
@@ -197,4 +245,9 @@ export function MindMapGraph({
       </ReactFlow>
     </div>
   );
+}
+
+export function MindMapGraph(props: MindMapGraphProps) {
+  // useReactFlow requires provider — parent already wraps ReactFlowProvider.
+  return <MindMapGraphInner {...props} />;
 }

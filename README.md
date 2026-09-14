@@ -22,21 +22,25 @@ Open [http://localhost:4317](http://localhost:4317).
 
 - **Node types** with distinct styling: `problem`, `solution`, `organization`, `person`
 - **Person nodes** render as circular avatars with the name below; click opens the detail panel
+- **Force-directed layout** via **d3-force** (default) — nodes settle by links; optional `pinned` flag reserved for future drag-to-pin (`fx`/`fy`)
+- **Remote avatars/logos** — LinkedIn/OG `imageUrl` stored as hotlinks (not downloaded into `public/`)
 - **Pan/zoom** graph canvas with minimap and controls
 - **Click a node** to view and edit details in the side panel
 - **Drag node handles** or use the panel to create labeled relationships
 - **Add nodes** via the header form
 - **Export / import** JSON backup from the UI
-- **Auto-save** node positions after dragging (debounced)
+- **Auto-save** node positions after the force sim settles / after dragging (debounced)
 
 ## Data model
 
-All nodes share: `id`, `name`, `type`, `notes`, `tags`, `position`.
+All nodes share: `id`, `name`, `type`, `notes`, `tags`, `position`, optional `pinned`.
 
 | Type | Extra fields |
 |------|-------------|
-| `organization` | `orgKind`, `orgEmail`, `website`, `linkedIn` |
-| `person` | `phone`, `email`, `linkedIn`, `imageUrl` (circular avatar; name renders below the circle) |
+| `organization` | `orgKind`, `orgEmail`, `website`, `linkedIn`, `imageUrl` (remote logo preferred) |
+| `person` | `phone`, `email`, `linkedIn`, `imageUrl` (remote LinkedIn/OG preferred; circular avatar) |
+
+Use tag `contacted` on people you’ve already reached out to.
 
 Edges: `id`, `source`, `target`, optional `label`.
 

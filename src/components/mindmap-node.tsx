@@ -23,6 +23,7 @@ function PersonAvatarNode({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+  const contacted = node.tags?.includes("contacted");
 
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -41,12 +42,13 @@ function PersonAvatarNode({
           )}
         >
           {node.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local/cached avatars; avoid next/image domain config
+            // eslint-disable-next-line @next/next/no-img-element -- remote LinkedIn/OG hotlinks by design
             <img
               src={node.imageUrl}
               alt=""
               className="h-full w-full object-cover"
               draggable={false}
+              referrerPolicy="no-referrer"
             />
           ) : (
             <div
@@ -73,6 +75,11 @@ function PersonAvatarNode({
       >
         {node.name}
       </p>
+      {contacted && (
+        <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-violet-700">
+          contacted
+        </span>
+      )}
     </div>
   );
 }
@@ -98,7 +105,18 @@ export function MindMapFlowNode({ data, selected }: NodeProps) {
     >
       <Handle type="target" position={Position.Top} className="!bg-muted-foreground" />
       <div className="flex items-center gap-1.5 mb-1">
-        <span className={cn("h-2 w-2 rounded-full shrink-0", style.dot)} />
+        {node.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- remote org logos by reference
+          <img
+            src={node.imageUrl}
+            alt=""
+            className="h-5 w-5 shrink-0 rounded-sm object-cover"
+            draggable={false}
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span className={cn("h-2 w-2 rounded-full shrink-0", style.dot)} />
+        )}
         <span className="text-[10px] uppercase tracking-wide opacity-70 font-medium">
           {style.label}
         </span>
