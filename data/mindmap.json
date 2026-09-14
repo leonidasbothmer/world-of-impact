@@ -10,8 +10,8 @@
         "impact"
       ],
       "position": {
-        "x": 342.0412639556726,
-        "y": -37.41430668506038
+        "x": 484.3251351405223,
+        "y": 20.584236391199095
       }
     },
     {
@@ -24,8 +24,8 @@
         "climate"
       ],
       "position": {
-        "x": 448.76769234831664,
-        "y": 81.38934018087984
+        "x": 545.1254793043411,
+        "y": 169.42446040492158
       }
     },
     {
@@ -38,8 +38,8 @@
         "sector"
       ],
       "position": {
-        "x": 341.9355817121684,
-        "y": 114.96526515107516
+        "x": 433.34035741622006,
+        "y": 162.74928675372263
       }
     },
     {
@@ -52,8 +52,8 @@
         "buildings"
       ],
       "position": {
-        "x": 475.3506229909727,
-        "y": -31.36756385139603
+        "x": 611.0634092721929,
+        "y": 75.49311808339577
       }
     },
     {
@@ -66,8 +66,8 @@
         "buildings"
       ],
       "position": {
-        "x": 389.86204496270136,
-        "y": 244.53504091627087
+        "x": 431.2915515308081,
+        "y": 300.9880696941899
       }
     },
     {
@@ -80,8 +80,8 @@
         "urban"
       ],
       "position": {
-        "x": 160.6821771529174,
-        "y": 73.99540504816504
+        "x": 279.10103122621734,
+        "y": 67.65031156464985
       }
     },
     {
@@ -94,8 +94,8 @@
         "sector"
       ],
       "position": {
-        "x": 419.39702580388246,
-        "y": -199.18630837374087
+        "x": 621.6228078797524,
+        "y": -93.05770558249961
       }
     },
     {
@@ -108,8 +108,8 @@
         "sector"
       ],
       "position": {
-        "x": -1248.6417647928133,
-        "y": -394.06279779872966
+        "x": -1780.2035016160257,
+        "y": -569.6438547145284
       }
     },
     {
@@ -124,8 +124,8 @@
       "orgKind": "NGO",
       "website": "https://darkmatterlabs.org",
       "position": {
-        "x": -30.009275392098633,
-        "y": 134.521290301799
+        "x": 77.94044146993555,
+        "y": 71.17997036142752
       }
     },
     {
@@ -141,8 +141,8 @@
       "orgKind": "startup",
       "website": "https://autarc.energy",
       "position": {
-        "x": 544.2123114991114,
-        "y": 139.95883436363235
+        "x": 612.2768600191805,
+        "y": 259.03866995918037
       }
     },
     {
@@ -158,8 +158,8 @@
       "orgKind": "startup",
       "website": "https://reonic.com",
       "position": {
-        "x": 501.8430325321385,
-        "y": 243.626287321996
+        "x": 535.9041599435438,
+        "y": 340.9491493652314
       }
     },
     {
@@ -174,8 +174,8 @@
       "orgKind": "startup",
       "website": "https://voize.de",
       "position": {
-        "x": -1255.1565439059902,
-        "y": -546.5135174871069
+        "x": -1781.2341208434498,
+        "y": -721.7307171637614
       }
     },
     {
@@ -190,8 +190,8 @@
       "orgKind": "scaleup",
       "website": "https://praxipal.com",
       "position": {
-        "x": -1298.6618238979331,
-        "y": -249.4386204395579
+        "x": -1881.6498504832268,
+        "y": -456.0271051693446
       }
     },
     {
@@ -206,8 +206,8 @@
       "linkedIn": "https://www.linkedin.com/in/aleksander-nowak-008b9357/",
       "imageUrl": "/avatars/aleksander-nowak.svg",
       "position": {
-        "x": -104.54625581681907,
-        "y": 290.61504843190465
+        "x": -35.110358553268526,
+        "y": 202.9873963982365
       },
       "pinned": false
     },
@@ -225,8 +225,8 @@
       "linkedIn": "https://www.linkedin.com/in/nancyb1",
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4E03AQE96u5SVzIVqw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1726557378134?e=2147483647&v=beta&t=31sgt42Pdu1tQ0E3MMVF8riaOsX0P01mDyPOA8kOYUM",
       "position": {
-        "x": 61.14944599641328,
-        "y": 297.8550615994512
+        "x": 120.03546962927551,
+        "y": 260.4767413605016
       }
     },
     {
@@ -240,8 +240,8 @@
       ],
       "orgKind": "startup",
       "position": {
-        "x": 190.40701068446813,
-        "y": 356.0620579086744
+        "x": 230.20408381042935,
+        "y": 350.26183224074197
       }
     },
     {
@@ -255,8 +255,8 @@
         "domain"
       ],
       "position": {
-        "x": 220.08752421851833,
-        "y": 168.93765158080524
+        "x": 306.3511596832363,
+        "y": 176.28132718643553
       }
     },
     {
@@ -270,8 +270,8 @@
         "adaptation"
       ],
       "position": {
-        "x": 165.44731332142157,
-        "y": -100.63694712137776
+        "x": 336.5900489718969,
+        "y": -98.94138241574068
       }
     },
     {
@@ -291,8 +291,8 @@
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFzsOCG6-357Q/company-logo_200_200/company-logo_200_200/0/1662483549293/open_systems_lab_logo?e=2147483647&v=beta&t=uToRt4XKLkJK-aSXyAExJe_osePhhiSWrGqA1aUQQNM",
       "pinned": false,
       "position": {
-        "x": 233.12879523074326,
-        "y": -11.406972551346856
+        "x": 373.1872419326117,
+        "y": 6.904404092781003
       }
     },
     {
@@ -309,8 +309,8 @@
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4E03AQGUdpfvAoaA9A/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1685194034317?e=2147483647&v=beta&t=SbhxbNe-6Q-Mn4t1hwiib5sw7OUctSciFjRuwg9hL_Q",
       "pinned": false,
       "position": {
-        "x": -205.9738234910041,
-        "y": 134.74210119949473
+        "x": -92.59026031740602,
+        "y": 26.6823855549102
       }
     },
     {
@@ -326,8 +326,8 @@
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4D03AQESt1fUtkcl4Q/profile-displayphoto-scale_200_200/B4DaBzacR2KkAg-/0/1788642708075?e=2147483647&v=beta&t=7BypjND40tyBpwp6IcLGhI5iTZmZgUFnai8-SRYF0eg",
       "pinned": false,
       "position": {
-        "x": -820.6686121089349,
-        "y": -118.06220499506823
+        "x": -1442.373511365973,
+        "y": -32.72633728724996
       }
     },
     {
@@ -344,8 +344,8 @@
       "imageUrl": "https://media.licdn.com/dms/image/v2/C4E03AQEvqQRdBVtUnw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1661458019946?e=2147483647&v=beta&t=FS4kgK08Veqx-4oBflU0Mqq_WB0keB7cAuoGgut_z94",
       "pinned": false,
       "position": {
-        "x": 189.61966998914332,
-        "y": -373.2247049442474
+        "x": 511.0199115399925,
+        "y": -348.6611615163454
       }
     },
     {
@@ -364,8 +364,8 @@
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQGi1Bl1A0sHKg/company-logo_200_200/B4DZeCkQl2HAAI-/0/1750242233132/nature_wealth_logo?e=2147483647&v=beta&t=cfGTCe26PgOyXJqHnQp_BshpZPc7MwktU-OqjmAylnc",
       "pinned": false,
       "position": {
-        "x": 281.0001787531117,
-        "y": -219.83179412880992
+        "x": 504.886455745215,
+        "y": -170.64862638750208
       }
     }
   ],
@@ -551,5 +551,5 @@
       "label": "enables"
     }
   ],
-  "updatedAt": "2026-09-14T10:02:48.104Z"
+  "updatedAt": "2026-09-14T10:25:54.077Z"
 }
