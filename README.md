@@ -21,6 +21,7 @@ Open [http://localhost:4317](http://localhost:4317).
 ## Features
 
 - **Node types** with distinct styling: `problem`, `solution`, `organization`, `person`
+- **Person nodes** render as circular avatars with the name below; click opens the detail panel
 - **Pan/zoom** graph canvas with minimap and controls
 - **Click a node** to view and edit details in the side panel
 - **Drag node handles** or use the panel to create labeled relationships
@@ -35,7 +36,7 @@ All nodes share: `id`, `name`, `type`, `notes`, `tags`, `position`.
 | Type | Extra fields |
 |------|-------------|
 | `organization` | `orgKind`, `orgEmail`, `website`, `linkedIn` |
-| `person` | `phone`, `email`, `linkedIn` |
+| `person` | `phone`, `email`, `linkedIn`, `imageUrl` (circular avatar; name renders below the circle) |
 
 Edges: `id`, `source`, `target`, optional `label`.
 

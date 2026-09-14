@@ -9,8 +9,81 @@ export type MindMapNodeData = {
   node: MindMapNode;
 };
 
+function PersonAvatarNode({
+  node,
+  selected,
+}: {
+  node: MindMapNode;
+  selected?: boolean;
+}) {
+  const style = NODE_TYPE_CONFIG.person;
+  const initials = node.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative">
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!bg-muted-foreground !-top-1"
+        />
+        <div
+          className={cn(
+            "h-16 w-16 overflow-hidden rounded-full border-2 shadow-sm transition-shadow",
+            style.border,
+            style.bg,
+            selected && "ring-2 ring-offset-2 ring-primary shadow-md",
+          )}
+        >
+          {node.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local/cached avatars; avoid next/image domain config
+            <img
+              src={node.imageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              draggable={false}
+            />
+          ) : (
+            <div
+              className={cn(
+                "flex h-full w-full items-center justify-center text-sm font-semibold",
+                style.text,
+              )}
+            >
+              {initials || "?"}
+            </div>
+          )}
+        </div>
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="!bg-muted-foreground !-bottom-1"
+        />
+      </div>
+      <p
+        className={cn(
+          "max-w-[140px] text-center text-xs font-semibold leading-tight",
+          style.text,
+        )}
+      >
+        {node.name}
+      </p>
+    </div>
+  );
+}
+
 export function MindMapFlowNode({ data, selected }: NodeProps) {
   const node = (data as MindMapNodeData).node;
+
+  if (node.type === "person") {
+    return <PersonAvatarNode node={node} selected={selected} />;
+  }
+
   const style = NODE_TYPE_CONFIG[node.type as NodeType];
 
   return (

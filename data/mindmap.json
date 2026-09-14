@@ -113,6 +113,51 @@
       "orgKind": "scaleup",
       "website": "https://praxipal.com",
       "position": { "x": -760, "y": 80 }
+    },
+    {
+      "id": "aleksander-nowak",
+      "name": "Aleksander Nowak",
+      "type": "person",
+      "notes": "Contact linked to Dark Matter Labs and Nancy Birkhölzer. LinkedIn profile image is not scraped (auth/CDN); using a local placeholder avatar in public/avatars/.",
+      "tags": ["contact", "urban"],
+      "linkedIn": "https://www.linkedin.com/in/aleksander-nowak-008b9357/",
+      "imageUrl": "/avatars/aleksander-nowak.svg",
+      "position": { "x": -640, "y": 340 }
+    },
+    {
+      "id": "nancy-birkholzer",
+      "name": "Nancy Birkhölzer",
+      "type": "person",
+      "notes": "Entrepreneur / design & innovation leader; connected to Dream Mobility. Spelling on LinkedIn is Birkhölzer (ö). Avatar is a local placeholder — LinkedIn CDN not scraped.",
+      "tags": ["contact", "mobility", "innovation"],
+      "linkedIn": "https://www.linkedin.com/in/nancyb1",
+      "imageUrl": "/avatars/nancy-birkholzer.svg",
+      "position": { "x": -320, "y": 360 }
+    },
+    {
+      "id": "dream-mobility",
+      "name": "Dream Mobility",
+      "type": "organization",
+      "notes": "Berlin-based mobility venture (dream Mobility GmbH) focused on passenger night-train and related mobility services. No public marketing website listed in lobby register (n/a); contact domain dreammobility.eu.",
+      "tags": ["mobility", "startup"],
+      "orgKind": "startup",
+      "position": { "x": -120, "y": 320 }
+    },
+    {
+      "id": "open-mobility",
+      "name": "Open Mobility",
+      "type": "problem",
+      "notes": "Domain/problem space around open, shared, and climate-aligned mobility systems.",
+      "tags": ["mobility", "climate", "domain"],
+      "position": { "x": 80, "y": 220 }
+    },
+    {
+      "id": "resilient-cities",
+      "name": "Resilient Cities",
+      "type": "problem",
+      "notes": "Urban resilience — adapting cities to climate risk, infrastructure stress, and social systems under change.",
+      "tags": ["cities", "climate", "adaptation"],
+      "position": { "x": -140, "y": 40 }
     }
   ],
   "edges": [
@@ -211,7 +256,55 @@
       "source": "finance",
       "target": "climate-change",
       "label": "funds"
+    },
+    {
+      "id": "e-aleksander-dml",
+      "source": "aleksander-nowak",
+      "target": "dark-matter-labs",
+      "label": "connected to"
+    },
+    {
+      "id": "e-aleksander-nancy",
+      "source": "aleksander-nowak",
+      "target": "nancy-birkholzer",
+      "label": "connected to"
+    },
+    {
+      "id": "e-nancy-dream",
+      "source": "nancy-birkholzer",
+      "target": "dream-mobility",
+      "label": "related to"
+    },
+    {
+      "id": "e-dream-open-mobility",
+      "source": "dream-mobility",
+      "target": "open-mobility",
+      "label": "works on"
+    },
+    {
+      "id": "e-open-mobility-climate",
+      "source": "open-mobility",
+      "target": "climate-change",
+      "label": "addresses"
+    },
+    {
+      "id": "e-climate-resilient-cities",
+      "source": "climate-change",
+      "target": "resilient-cities",
+      "label": "drives"
+    },
+    {
+      "id": "e-urban-resilient-cities",
+      "source": "urban-development",
+      "target": "resilient-cities",
+      "label": "includes"
+    },
+    {
+      "id": "e-nancy-open-mobility",
+      "source": "nancy-birkholzer",
+      "target": "open-mobility",
+      "label": "interested in"
     }
   ],
-  "updatedAt": "2026-09-14T08:00:00.000Z"
+  "updatedAt": "2026-09-14T08:50:00.000Z"
 }

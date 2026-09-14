@@ -20,6 +20,8 @@ export interface MindMapNode {
   /** Person fields */
   phone?: string;
   email?: string;
+  /** Local or remote avatar URL shown inside circular person nodes */
+  imageUrl?: string;
 }
 
 export interface MindMapEdge {

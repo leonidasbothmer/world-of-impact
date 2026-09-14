@@ -239,6 +239,15 @@ export function NodePanel({
                   onChange={(e) => updateField("linkedIn", e.target.value)}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="imageUrl">Avatar image URL</Label>
+                <Input
+                  id="imageUrl"
+                  value={draft.imageUrl ?? ""}
+                  onChange={(e) => updateField("imageUrl", e.target.value)}
+                  placeholder="/avatars/name.svg"
+                />
+              </div>
             </>
           )}
         </div>
