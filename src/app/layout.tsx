@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Impact Mind Map",
+  title: "Atlas of Social Progress",
   description:
-    "A purpose-driven job-search mind map — explore problems, solutions, organizations, and people.",
+    "An atlas of work aimed at social progress — problems, organizations, and people.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

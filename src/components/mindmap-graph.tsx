@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import {
   ReactFlow,
   Background,
@@ -12,96 +13,410 @@ import {
   type Node,
   type Edge,
   type OnConnect,
+  type OnConnectEnd,
   type OnNodeDrag,
+  type ConnectionLineComponentProps,
+  type Viewport,
+  ConnectionLineType,
   ConnectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import {
+  CreateNodeDraft,
+  type CreateNodeDraftState,
+} from "@/components/create-node-draft";
+import {
+  EdgeLabelContext,
+  MindMapFlowEdge,
+} from "@/components/mindmap-edge";
 import { MindMapFlowNode } from "@/components/mindmap-node";
-import { useForceLayout } from "@/lib/use-force-layout";
-import type { MindMapData, MindMapNode, NodeType } from "@/types/mindmap";
+import {
+  edgeEndpointIds,
+  edgeHighlight,
+  neighborIds,
+  nodeHighlight,
+  nodeZIndex,
+  type EdgeHighlight,
+  type NodeHighlight,
+} from "@/lib/selection-highlight";
+import {
+  isPersonPersonEdge,
+  useForceLayout,
+} from "@/lib/use-force-layout";
+import {
+  orbitMemberIds,
+  orbitPositions,
+  type OrbitNodeBox,
+  type OrbitPoint,
+} from "@/lib/orbit-layout";
+import { visibleNodeIds } from "@/lib/visible-nodes";
+import type {
+  MindMapData,
+  MindMapGraphChange,
+  MindMapNode,
+  NodeType,
+} from "@/types/mindmap";
 
 const nodeTypes = { mindmap: MindMapFlowNode };
+const edgeTypes = { mindmap: MindMapFlowEdge };
 
 const MINIMAP_COLORS: Record<NodeType, string> = {
   problem: "#f43f5e",
   solution: "#10b981",
   organization: "#0ea5e9",
   person: "#8b5cf6",
+  academic: "#f59e0b",
+  media: "#d946ef",
+};
+
+export type NodeFocusRequest = {
+  id: string;
+  token: number;
 };
 
 type MindMapGraphProps = {
   data: MindMapData;
+  hiddenTypes: ReadonlySet<NodeType>;
   selectedNodeId: string | null;
+  focusRequest?: NodeFocusRequest | null;
   onSelectNode: (id: string | null) => void;
-  onDataChange: (data: MindMapData) => void;
+  onGraphChange: (change: MindMapGraphChange) => void;
+  /** When set, only these node ids (plus always-visible selection) stay on the canvas. */
+  focusFilterIds?: ReadonlySet<string> | null;
 };
 
-function toFlowNodes(nodes: MindMapNode[], selectedId: string | null): Node[] {
-  return nodes.map((node) => ({
-    id: node.id,
-    type: "mindmap",
-    position: node.position,
-    data: { node },
-    selected: node.id === selectedId,
-  }));
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
-function toFlowEdges(edges: MindMapData["edges"]): Edge[] {
-  return edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    label: edge.label,
-    animated: false,
-    style: { strokeWidth: 1.5 },
-    labelStyle: { fontSize: 10, fill: "var(--muted-foreground)" },
-  }));
+function defaultTypeFromSource(type: NodeType): NodeType {
+  switch (type) {
+    case "organization":
+    case "person":
+    case "academic":
+    case "media":
+    case "problem":
+      return "solution";
+    case "solution":
+      return "organization";
+  }
+}
+
+function clientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } {
+  if ("changedTouches" in event && event.changedTouches[0]) {
+    return {
+      x: event.changedTouches[0].clientX,
+      y: event.changedTouches[0].clientY,
+    };
+  }
+  const mouse = event as MouseEvent;
+  return { x: mouse.clientX, y: mouse.clientY };
+}
+
+function edgeStyle(
+  social: boolean,
+  highlight?: EdgeHighlight,
+  focused = false,
+  selected = false,
+) {
+  const dashed = social ? { strokeDasharray: "5 4" } : {};
+  if (selected) {
+    return {
+      ...dashed,
+      strokeWidth: social ? 1.25 : 1.35,
+      stroke: "var(--primary)",
+      opacity: 1,
+    };
+  }
+  if (highlight === "neighbor") {
+    return {
+      ...dashed,
+      strokeWidth: social ? 1.5 : 1.75,
+      stroke: "var(--ring)",
+      opacity: social ? 0.28 : 0.34,
+    };
+  }
+  return social
+    ? {
+        strokeWidth: 1.25,
+        stroke: "var(--muted-foreground)",
+        strokeDasharray: "5 4",
+        opacity: focused ? 0.08 : 0.16,
+      }
+    : { strokeWidth: 1.35, opacity: focused ? 0.08 : 0.2 };
+}
+
+function nodeFocusStyle(
+  selectedId: string | null,
+  nodeId: string,
+  highlight?: NodeHighlight,
+  edgeFocused = false,
+) {
+  const dimmed = edgeFocused
+    ? highlight !== "endpoint"
+    : Boolean(selectedId) && nodeId !== selectedId && highlight !== "neighbor";
+  return {
+    opacity: dimmed ? 0.4 : 1,
+    transition: "opacity 150ms ease",
+  };
+}
+
+function toFlowNodes(
+  nodes: MindMapNode[],
+  selectedId: string | null,
+  neighbors: Set<string>,
+  onUnpin?: (id: string) => void,
+  endpoints?: ReadonlySet<string>,
+): Node[] {
+  const edgeFocused = Boolean(endpoints && endpoints.size > 0);
+  return nodes.map((node) => {
+    const selected = node.id === selectedId;
+    const highlight = nodeHighlight(node.id, selectedId, neighbors, endpoints);
+    return {
+      id: node.id,
+      type: "mindmap",
+      position: node.position,
+      data: { node, onUnpin, highlight },
+      selected,
+      zIndex: nodeZIndex(selected, highlight),
+      style: nodeFocusStyle(selectedId, node.id, highlight, edgeFocused),
+    };
+  });
+}
+
+function toFlowEdges(
+  edges: MindMapData["edges"],
+  nodes: MindMapNode[],
+  selectedId: string | null,
+  selectedEdgeId: string | null = null,
+): Edge[] {
+  const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+  const focused = Boolean(selectedId) || Boolean(selectedEdgeId);
+  return edges.map((edge) => {
+    const social = isPersonPersonEdge(edge, byId);
+    const selected = edge.id === selectedEdgeId;
+    const highlight = selected
+      ? undefined
+      : edgeHighlight(edge.source, edge.target, selectedId);
+    return {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: "center",
+      targetHandle: "center",
+      label: edge.label,
+      type: "mindmap",
+      animated: false,
+      selectable: true,
+      selected,
+      style: edgeStyle(social, highlight, focused, selected),
+      zIndex: selected ? 5 : highlight === "neighbor" ? 3 : 0,
+    };
+  });
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return target.isContentEditable;
 }
 
 function flowSignature(data: MindMapData): string {
-  return `${data.updatedAt ?? ""}|${data.nodes.length}|${data.edges.length}|${data.nodes
+  return `${data.nodes.length}|${data.edges.length}|${data.nodes
     .map((n) => n.id)
     .join(",")}|${data.edges.map((e) => e.id).join(",")}`;
 }
 
+function MindMapConnectionLine({
+  fromX,
+  fromY,
+  toX,
+  toY,
+  toNode,
+  connectionLineStyle,
+}: ConnectionLineComponentProps) {
+  const showGhost = !toNode;
+  const w = 100;
+  const h = 30;
+
+  return (
+    <g>
+      <path
+        fill="none"
+        stroke={
+          (connectionLineStyle?.stroke as string | undefined) ??
+          "var(--muted-foreground)"
+        }
+        strokeWidth={
+          typeof connectionLineStyle?.strokeWidth === "number"
+            ? connectionLineStyle.strokeWidth
+            : 1.5
+        }
+        d={`M ${fromX},${fromY} L ${toX},${toY}`}
+      />
+      {showGhost ? (
+        <g
+          transform={`translate(${toX - w / 2}, ${toY - h / 2})`}
+          opacity={0.55}
+          style={{ pointerEvents: "none" }}
+        >
+          <rect
+            width={w}
+            height={h}
+            rx={6}
+            fill="var(--background)"
+            stroke="var(--muted-foreground)"
+            strokeDasharray="4 3"
+            strokeWidth={1.5}
+          />
+          <text
+            x={w / 2}
+            y={h / 2 + 1}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="var(--muted-foreground)"
+            fontSize={11}
+          >
+            New node
+          </text>
+        </g>
+      ) : null}
+    </g>
+  );
+}
+
+function shownGraph(data: MindMapData, visibleIds: Set<string>) {
+  return {
+    nodes: data.nodes.filter((node) => visibleIds.has(node.id)),
+    edges: data.edges.filter(
+      (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target),
+    ),
+  };
+}
+
+const ORBIT_MS = 650;
+
+function nodeBox(node: Node): OrbitNodeBox {
+  const width = node.measured?.width || 96;
+  const height = node.measured?.height || 48;
+  return {
+    id: node.id,
+    x: node.position.x + width / 2,
+    y: node.position.y + height / 2,
+    width,
+    height,
+  };
+}
+
 function MindMapGraphInner({
   data,
+  hiddenTypes,
   selectedNodeId,
+  focusRequest = null,
   onSelectNode,
-  onDataChange,
+  onGraphChange,
+  focusFilterIds = null,
 }: MindMapGraphProps) {
+  const { screenToFlowPosition, fitView, getViewport, setViewport, setCenter } =
+    useReactFlow();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const neighbors = neighborIds(selectedNodeId, data.edges);
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    toFlowNodes(data.nodes, selectedNodeId),
+    toFlowNodes(data.nodes, selectedNodeId, neighbors),
   );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(data.edges));
-  const syncedSig = useRef(flowSignature(data));
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    toFlowEdges(data.edges, data.nodes, selectedNodeId),
+  );
+  const [draft, setDraft] = useState<CreateNodeDraftState | null>(null);
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [orbitId, setOrbitId] = useState<string | null>(null);
+  const [orbitEpoch, setOrbitEpoch] = useState(0);
+  const orbitIdRef = useRef<string | null>(null);
+  const orbitingRef = useRef(false);
+  const viewportBeforeRef = useRef<Viewport | null>(null);
+  const restoreRef = useRef<{
+    positions: Map<string, OrbitPoint>;
+    viewport: Viewport | null;
+  } | null>(null);
+  const snapPositionsRef = useRef<Map<string, OrbitPoint> | null>(null);
+  const motionGenRef = useRef(0);
+  const animRef = useRef(0);
+  const pendingFramesRef = useRef<number[]>([]);
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const visibleIds = useMemo(() => {
+    if (orbitId) return orbitMemberIds(data.nodes, data.edges, orbitId);
+    const byType = visibleNodeIds(
+      data.nodes,
+      data.edges,
+      hiddenTypes,
+      selectedNodeId,
+    );
+    if (!focusFilterIds) return byType;
+    const next = new Set<string>();
+    for (const id of byType) {
+      if (focusFilterIds.has(id) || id === selectedNodeId) next.add(id);
+    }
+    return next;
+  }, [data, hiddenTypes, selectedNodeId, focusFilterIds, orbitId]);
+  const viewKey = `${flowSignature(data)}|${[...visibleIds].sort().join(",")}|orbit:${orbitId ?? ""}`;
+  const viewKeyRef = useRef("");
+  const visibleRef = useRef(visibleIds);
+  visibleRef.current = visibleIds;
+  const selectedRef = useRef(selectedNodeId);
+  const selectedEdgeRef = useRef<string | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
-  const { fitView } = useReactFlow();
-  const didFitRef = useRef(false);
+
+  const layoutSignature = useCallback(
+    (next: MindMapData, ids: Iterable<string>) =>
+      `${flowSignature(next)}|${[...ids].sort().join(",")}|orbit:${orbitIdRef.current ?? ""}`,
+    [],
+  );
 
   const persistPositions = useCallback(
     (positions: Record<string, { x: number; y: number }>) => {
-      const current = dataRef.current;
-      let changed = false;
-      const updated = current.nodes.map((node) => {
-        const pos = positions[node.id];
-        if (!pos) return node;
-        if (
-          Math.abs(pos.x - node.position.x) < 0.5 &&
-          Math.abs(pos.y - node.position.y) < 0.5
-        ) {
-          return node;
-        }
-        changed = true;
-        return { ...node, position: { x: pos.x, y: pos.y } };
-      });
-      if (!changed) return;
-      const next = { ...current, nodes: updated };
-      syncedSig.current = flowSignature(next);
-      onDataChange(next);
+      onGraphChange({ reason: "positions", positions });
     },
-    [onDataChange],
+    [onGraphChange],
+  );
+
+  const persistPin = useCallback(
+    (
+      id: string,
+      pinned: boolean,
+      position?: { x: number; y: number },
+      extraPositions?: Record<string, { x: number; y: number }>,
+    ) => {
+      onGraphChange({
+        reason: "pin",
+        id,
+        pinned,
+        position,
+        extraPositions,
+      });
+    },
+    [onGraphChange],
+  );
+
+  const didFitRef = useRef(false);
+  const userMovedRef = useRef(false);
+  const framingRef = useRef(false);
+  const frameGraph = useCallback(
+    (maxZoom: number, duration: number) => {
+      framingRef.current = true;
+      void fitView({ padding: 0.18, duration, maxZoom }).finally(() => {
+        window.setTimeout(() => {
+          framingRef.current = false;
+        }, 50);
+      });
+    },
+    [fitView],
   );
 
   const force = useForceLayout({
@@ -109,38 +424,286 @@ function MindMapGraphInner({
     setNodes,
     onSettled: (positions) => {
       persistPositions(positions);
-      if (!didFitRef.current) {
-        didFitRef.current = true;
-        requestAnimationFrame(() => fitView({ padding: 0.2, duration: 400 }));
-      }
+      if (didFitRef.current || userMovedRef.current) return;
+      didFitRef.current = true;
+      window.setTimeout(() => frameGraph(1.1, 450), 60);
     },
   });
 
-  // Sync from parent when node/edge identity set changes (CRUD), not on every drag tick.
+  const unpinNode = useCallback(
+    (id: string) => {
+      force.releaseNode(id, false);
+      persistPin(id, false);
+    },
+    [force, persistPin],
+  );
+
+  // Saved positions sit around the origin, which the default camera misses.
+  // Cap the first frame so a too-early fit cannot zoom into the core and
+  // clip the rim; the simulation's settle frames the final bounds.
   useEffect(() => {
-    const sig = flowSignature(data);
-    if (sig === syncedSig.current) {
+    const timer = window.setTimeout(() => frameGraph(0.8, 0), 120);
+    return () => window.clearTimeout(timer);
+  }, [frameGraph]);
+
+  function cancelOrbitMotion() {
+    motionGenRef.current += 1;
+    cancelAnimationFrame(animRef.current);
+    for (const frame of pendingFramesRef.current) cancelAnimationFrame(frame);
+    pendingFramesRef.current = [];
+  }
+
+  function animatePositions(
+    targets: Map<string, OrbitPoint>,
+    onDone?: () => void,
+  ) {
+    const generation = motionGenRef.current;
+    const started = performance.now();
+    const origins = new Map(
+      nodesRef.current.map((node) => [node.id, { ...node.position }]),
+    );
+    const step = (now: number) => {
+      if (motionGenRef.current !== generation) return;
+      const t = Math.min(1, (now - started) / ORBIT_MS);
+      const eased = 1 - (1 - t) ** 3;
       setNodes((current) =>
-        current.map((n) => ({
-          ...n,
-          selected: n.id === selectedNodeId,
-          data: {
-            node:
-              data.nodes.find((dn) => dn.id === n.id) ??
-              (n.data as { node: MindMapNode }).node,
-          },
-        })),
+        current.map((node) => {
+          const target = targets.get(node.id);
+          if (!target) return node;
+          const origin = origins.get(node.id) ?? target;
+          const x = origin.x + (target.x - origin.x) * eased;
+          const y = origin.y + (target.y - origin.y) * eased;
+          if (node.position.x === x && node.position.y === y) return node;
+          return { ...node, position: { x, y } };
+        }),
       );
+      if (t < 1) animRef.current = requestAnimationFrame(step);
+      else onDone?.();
+    };
+    animRef.current = requestAnimationFrame(step);
+  }
+
+  function frameRing(origin: OrbitPoint, targets: Map<string, OrbitPoint>) {
+    const byId = new Map(nodesRef.current.map((node) => [node.id, node]));
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const [id, pos] of targets) {
+      const node = byId.get(id);
+      const width = node?.measured?.width || 96;
+      const height = node?.measured?.height || 48;
+      minX = Math.min(minX, pos.x);
+      minY = Math.min(minY, pos.y);
+      maxX = Math.max(maxX, pos.x + width);
+      maxY = Math.max(maxY, pos.y + height);
+    }
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (!rect || !Number.isFinite(minX)) return;
+    const pad = 0.2;
+    const zoom = Math.min(
+      1.2,
+      (rect.width * (1 - pad * 2)) / Math.max(1, maxX - minX),
+      (rect.height * (1 - pad * 2)) / Math.max(1, maxY - minY),
+    );
+    framingRef.current = true;
+    void setCenter(origin.x, origin.y, {
+      zoom: Math.max(0.2, zoom),
+      duration: ORBIT_MS,
+    }).finally(() => {
+      window.setTimeout(() => {
+        framingRef.current = false;
+      }, 50);
+    });
+  }
+
+  const enterOrbit = useCallback(
+    (id: string) => {
+      cancelOrbitMotion();
+      if (!orbitIdRef.current) viewportBeforeRef.current = getViewport();
+      orbitIdRef.current = id;
+      restoreRef.current = null;
+      snapPositionsRef.current = null;
+      force.pause();
+      setSelectedEdgeId(null);
+      onSelectNode(id);
+      setOrbitId(id);
+      setOrbitEpoch((epoch) => epoch + 1);
+    },
+    [force, getViewport, onSelectNode],
+  );
+
+  const leaveOrbit = useCallback(
+    (options?: { restoreView?: boolean; animate?: boolean }) => {
+      if (!orbitIdRef.current && !orbitingRef.current) return;
+      cancelOrbitMotion();
+      const positions = force.positions();
+      const restoreView = options?.restoreView !== false;
+      const viewport = restoreView ? viewportBeforeRef.current : null;
+      orbitIdRef.current = null;
+      viewportBeforeRef.current = null;
+      if (options?.animate === false) {
+        restoreRef.current = null;
+        snapPositionsRef.current = positions;
+        setOrbitId(null);
+        force.resume();
+        return;
+      }
+      restoreRef.current = { positions, viewport };
+      setOrbitId(null);
+      setOrbitEpoch((epoch) => epoch + 1);
+    },
+    [force],
+  );
+
+  // Sync from parent when the graph or the visible set changes, not on every drag tick.
+  useEffect(() => {
+    if (!selectedEdgeId) return;
+    if (!data.edges.some((edge) => edge.id === selectedEdgeId)) {
+      setSelectedEdgeId(null);
+    }
+  }, [data.edges, selectedEdgeId]);
+
+  useEffect(() => {
+    if (!selectedNodeId) return;
+    setSelectedEdgeId(null);
+  }, [selectedNodeId]);
+
+  useEffect(() => {
+    const edgeId = selectedNodeId ? null : selectedEdgeId;
+    const endpoints = edgeEndpointIds(edgeId, data.edges);
+    const nextNeighbors = neighborIds(selectedNodeId, data.edges);
+    const selectionChanged = selectedRef.current !== selectedNodeId;
+    const edgeSelectionChanged = selectedEdgeRef.current !== edgeId;
+    selectedRef.current = selectedNodeId;
+    selectedEdgeRef.current = edgeId;
+    const leavingOrbit = orbitingRef.current && !orbitId;
+    orbitingRef.current = orbitId != null;
+    const view = shownGraph(data, visibleIds);
+    if (viewKey === viewKeyRef.current) {
+      setNodes((current) =>
+        current.map((n) => {
+          const selected = n.id === selectedNodeId;
+          const highlight = nodeHighlight(
+            n.id,
+            selectedNodeId,
+            nextNeighbors,
+            endpoints,
+          );
+          return {
+            ...n,
+            selected,
+            zIndex: nodeZIndex(selected, highlight),
+            style: nodeFocusStyle(
+              selectedNodeId,
+              n.id,
+              highlight,
+              endpoints.size > 0,
+            ),
+            data: {
+              node:
+                data.nodes.find((dn) => dn.id === n.id) ??
+                (n.data as { node: MindMapNode }).node,
+              onUnpin: unpinNode,
+              highlight,
+            },
+          };
+        }),
+      );
+      setEdges((current) => {
+        const shownSelected = current.find((edge) => edge.selected)?.id ?? null;
+        if (
+          !selectionChanged &&
+          !edgeSelectionChanged &&
+          shownSelected === edgeId
+        ) {
+          return current;
+        }
+        return toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId);
+      });
       return;
     }
-    syncedSig.current = sig;
-    didFitRef.current = false;
-    setNodes(toFlowNodes(data.nodes, selectedNodeId));
-    setEdges(toFlowEdges(data.edges));
-  }, [data, selectedNodeId, setNodes, setEdges]);
+    viewKeyRef.current = viewKey;
+    const snap = snapPositionsRef.current;
+    snapPositionsRef.current = null;
+    const live = leavingOrbit ? restoreRef.current?.positions : null;
+    setNodes((current) => {
+      const positions = new Map(current.map((node) => [node.id, node.position]));
+      const nodes = view.nodes.map((node) => {
+        if (snap?.has(node.id)) return { ...node, position: snap.get(node.id)! };
+        if (leavingOrbit) {
+          const kept = positions.get(node.id);
+          if (kept) return { ...node, position: kept };
+          const restored = live?.get(node.id);
+          if (restored) return { ...node, position: restored };
+          return node;
+        }
+        const position = positions.get(node.id);
+        return position ? { ...node, position } : node;
+      });
+      return toFlowNodes(nodes, selectedNodeId, nextNeighbors, unpinNode, endpoints);
+    });
+    setEdges(toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId));
+  }, [data, orbitId, selectedEdgeId, selectedNodeId, setNodes, setEdges, unpinNode, viewKey, visibleIds]);
+
+  useEffect(() => {
+    if (!orbitIdRef.current && !restoreRef.current) return;
+    let cancelled = false;
+    const wait = (attempt: number) => {
+      if (cancelled) return;
+      const want = visibleRef.current;
+      const have = new Set(nodesRef.current.map((node) => node.id));
+      const ready =
+        want.size > 0 &&
+        have.size === want.size &&
+        [...want].every((id) => have.has(id));
+      if (!ready && attempt < 8) {
+        const frame = requestAnimationFrame(() => wait(attempt + 1));
+        pendingFramesRef.current.push(frame);
+        return;
+      }
+      if (cancelled) return;
+      const centerId = orbitIdRef.current;
+      if (centerId) {
+        const current = nodesRef.current.filter((node) => want.has(node.id));
+        const hub = current.find((node) => node.id === centerId);
+        if (!hub) return;
+        const hubBox = nodeBox(hub);
+        const origin = { x: hubBox.x, y: hubBox.y };
+        const neighbors = current
+          .filter((node) => node.id !== centerId)
+          .map(nodeBox);
+        const targets = orbitPositions(origin, hubBox, neighbors);
+        animatePositions(targets);
+        frameRing(origin, targets);
+        return;
+      }
+      const pending = restoreRef.current;
+      if (!pending) return;
+      restoreRef.current = null;
+      animatePositions(pending.positions, () => {
+        if (!cancelled) force.resume();
+      });
+      if (pending.viewport) {
+        framingRef.current = true;
+        void setViewport(pending.viewport, { duration: ORBIT_MS }).finally(() => {
+          window.setTimeout(() => {
+            framingRef.current = false;
+          }, 50);
+        });
+      }
+    };
+    const frame = requestAnimationFrame(() => wait(0));
+    pendingFramesRef.current.push(frame);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [orbitEpoch, force, setViewport]);
 
   const onNodeDragStart: OnNodeDrag = useCallback(
     (_event, node) => {
+      if (orbitIdRef.current) return;
       force.fixNode(node.id, node.position.x, node.position.y);
     },
     [force],
@@ -148,6 +711,7 @@ function MindMapGraphInner({
 
   const onNodeDrag: OnNodeDrag = useCallback(
     (_event, node) => {
+      if (orbitIdRef.current) return;
       force.dragNode(node.id, node.position.x, node.position.y);
     },
     [force],
@@ -155,32 +719,112 @@ function MindMapGraphInner({
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, node, nextNodes) => {
-      const source = dataRef.current.nodes.find((n) => n.id === node.id);
-      force.releaseNode(node.id, source?.pinned);
+      if (orbitIdRef.current) return;
+      force.releaseNode(node.id, true);
       const positions: Record<string, { x: number; y: number }> = {};
       for (const n of nextNodes) {
         positions[n.id] = n.position;
       }
-      persistPositions(positions);
+      persistPin(node.id, true, node.position, positions);
     },
-    [force, persistPositions],
+    [force, persistPin],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
       if (!connection.source || !connection.target) return;
+      if (connection.source === connection.target) return;
+      setDraft(null);
       const current = dataRef.current;
+      const exists = current.edges.some(
+        (edge) =>
+          edge.source === connection.source && edge.target === connection.target,
+      );
+      if (exists) return;
       const newEdge = {
         id: `e-${connection.source}-${connection.target}-${Date.now()}`,
         source: connection.source,
         target: connection.target,
       };
       const next = { ...current, edges: [...current.edges, newEdge] };
-      syncedSig.current = flowSignature(next);
-      setEdges(toFlowEdges(next.edges));
-      onDataChange(next);
+      dataRef.current = next;
+      const shown = shownGraph(next, visibleRef.current);
+      viewKeyRef.current = layoutSignature(next, visibleRef.current);
+      setEdges(toFlowEdges(shown.edges, shown.nodes, selectedNodeId));
+      onGraphChange({ reason: "connect", edge: newEdge });
     },
-    [onDataChange, setEdges],
+    [layoutSignature, onGraphChange, selectedNodeId, setEdges],
+  );
+
+  const onConnectEnd: OnConnectEnd = useCallback(
+    (event, connectionState) => {
+      if (connectionState.toNode || !connectionState.fromNode) return;
+
+      const screen = clientPoint(event);
+      const flow = screenToFlowPosition(screen);
+      const sourceId = connectionState.fromNode.id;
+      const source = dataRef.current.nodes.find((n) => n.id === sourceId);
+      const sourceType = (source?.type ?? "solution") as NodeType;
+
+      setEditingEdgeId(null);
+      setDraft({
+        sourceId,
+        position: { x: flow.x - 50, y: flow.y - 15 },
+        screen,
+        defaultType: defaultTypeFromSource(sourceType),
+      });
+    },
+    [screenToFlowPosition],
+  );
+
+  const cancelDraft = useCallback(() => setDraft(null), []);
+
+  const confirmDraft = useCallback(
+    (input: {
+      name: string;
+      type: NodeType;
+      linkedIn?: string;
+      notes?: string;
+      imageUrl?: string;
+    }) => {
+      if (!draft) return;
+      const current = dataRef.current;
+      const id = `${slugify(input.name) || "node"}-${Date.now()}`;
+      const newNode: MindMapNode = {
+        id,
+        name: input.name,
+        type: input.type,
+        notes: input.notes ?? "",
+        tags: [],
+        position: draft.position,
+        pinned: true,
+        ...(input.linkedIn ? { linkedIn: input.linkedIn } : {}),
+        ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
+      };
+      const newEdge = {
+        id: `e-${draft.sourceId}-${id}-${Date.now()}`,
+        source: draft.sourceId,
+        target: id,
+      };
+      const next = {
+        ...current,
+        nodes: [...current.nodes, newNode],
+        edges: [...current.edges, newEdge],
+      };
+      dataRef.current = next;
+      const shownIds = new Set(visibleRef.current);
+      shownIds.add(id);
+      const shown = shownGraph(next, shownIds);
+      viewKeyRef.current = layoutSignature(next, shownIds);
+      const createdNeighbors = neighborIds(id, next.edges);
+      setNodes(toFlowNodes(shown.nodes, id, createdNeighbors, unpinNode));
+      setEdges(toFlowEdges(shown.edges, shown.nodes, id));
+      setDraft(null);
+      setSelectedEdgeId(null);
+      onSelectNode(id);
+      onGraphChange({ reason: "create", node: newNode, edge: newEdge });
+    },
+    [draft, layoutSignature, onGraphChange, onSelectNode, setEdges, setNodes, unpinNode],
   );
 
   const handleEdgesChange = useCallback(
@@ -194,40 +838,175 @@ function MindMapGraphInner({
         ...current,
         edges: current.edges.filter((e) => !removedIds.has(e.id)),
       };
-      syncedSig.current = flowSignature(next);
-      onDataChange(next);
+      dataRef.current = next;
+      viewKeyRef.current = layoutSignature(next, visibleRef.current);
+      onGraphChange({ reason: "removeEdges", ids: [...removedIds] });
     },
-    [onEdgesChange, onDataChange],
+    [layoutSignature, onEdgesChange, onGraphChange],
   );
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
+      setSelectedEdgeId(null);
       onSelectNode(node.id);
     },
     [onSelectNode],
   );
 
+  const onEdgeClick = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.stopPropagation();
+      setDraft(null);
+      setSelectedEdgeId(edge.id);
+      if (selectedRef.current) onSelectNode(null);
+    },
+    [onSelectNode],
+  );
+
+  const onNodeDoubleClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (orbitIdRef.current === node.id) {
+        leaveOrbit();
+        return;
+      }
+      enterOrbit(node.id);
+    },
+    [enterOrbit, leaveOrbit],
+  );
+
+  const commitEdgeLabel = useCallback(
+    (id: string, value: string) => {
+      const next = value.trim();
+      setEditingEdgeId((current) => (current === id ? null : current));
+      const previous =
+        dataRef.current.edges.find((edge) => edge.id === id)?.label ?? "";
+      if (previous === next) return;
+      const label = next || undefined;
+      setEdges((current) =>
+        current.map((edge) => (edge.id === id ? { ...edge, label } : edge)),
+      );
+      onGraphChange({ reason: "label", id, label });
+    },
+    [onGraphChange, setEdges],
+  );
+
+  const edgeLabelApi = useMemo(
+    () => ({
+      editingId: editingEdgeId,
+      commit: commitEdgeLabel,
+      cancel: () => setEditingEdgeId(null),
+      select: (id: string) => {
+        setDraft(null);
+        setSelectedEdgeId(id);
+        if (selectedRef.current) onSelectNode(null);
+      },
+    }),
+    [commitEdgeLabel, editingEdgeId, onSelectNode],
+  );
+
+  const onEdgeDoubleClick = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.stopPropagation();
+      setDraft(null);
+      setEditingEdgeId(edge.id);
+    },
+    [],
+  );
+
   const onPaneClick = useCallback(() => {
+    setSelectedEdgeId(null);
+    if (draft) {
+      setDraft(null);
+      return;
+    }
+    if (orbitIdRef.current) {
+      leaveOrbit();
+      return;
+    }
     onSelectNode(null);
-  }, [onSelectNode]);
+  }, [draft, leaveOrbit, onSelectNode]);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    if (orbitIdRef.current) leaveOrbit({ restoreView: false, animate: false });
+    const id = focusRequest.id;
+    const timer = window.setTimeout(() => {
+      void fitView({
+        nodes: [{ id }],
+        duration: 450,
+        padding: 0.4,
+        maxZoom: 1.5,
+      });
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [focusRequest, fitView, leaveOrbit]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (orbitIdRef.current) {
+          event.preventDefault();
+          leaveOrbit();
+          return;
+        }
+        if (selectedEdgeRef.current) setSelectedEdgeId(null);
+        return;
+      }
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const id = selectedEdgeRef.current;
+      if (!id || isTypingTarget(event.target)) return;
+      event.preventDefault();
+      selectedEdgeRef.current = null;
+      setSelectedEdgeId(null);
+      setEditingEdgeId((current) => (current === id ? null : current));
+      onGraphChange({ reason: "removeEdges", ids: [id] });
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [leaveOrbit, onGraphChange]);
 
   return (
-    <div className="h-full w-full">
+    <div ref={wrapperRef} className="relative h-full w-full">
+      <EdgeLabelContext.Provider value={edgeLabelApi}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onEdgeClick={onEdgeClick}
+        onEdgeDoubleClick={onEdgeDoubleClick}
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
+        nodesDraggable={!orbitId}
+        zoomOnDoubleClick={false}
+        onMoveStart={() => {
+          if (!framingRef.current) userMovedRef.current = true;
+        }}
         connectionMode={ConnectionMode.Loose}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
+        connectionLineType={ConnectionLineType.Straight}
+        connectionLineComponent={MindMapConnectionLine}
+        connectionLineStyle={{
+          stroke: "var(--muted-foreground)",
+          strokeWidth: 1.5,
+        }}
+        connectionRadius={48}
+        isValidConnection={(connection) =>
+          !!connection.source &&
+          !!connection.target &&
+          connection.source !== connection.target
+        }
+        deleteKeyCode={null}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
@@ -243,6 +1022,40 @@ function MindMapGraphInner({
           className="!bg-background/80"
         />
       </ReactFlow>
+      </EdgeLabelContext.Provider>
+
+      {orbitId ? (
+        <button
+          type="button"
+          onClick={() => leaveOrbit()}
+          className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium shadow-sm backdrop-blur-sm hover:bg-muted"
+          title="Back to the full graph"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back
+        </button>
+      ) : null}
+
+      {draft ? (
+        <CreateNodeDraft
+          draft={draft}
+          nodes={data.nodes}
+          onConfirm={confirmDraft}
+          onSelectExisting={(id) => {
+            setDraft(null);
+            onSelectNode(id);
+            window.setTimeout(() => {
+              void fitView({
+                nodes: [{ id }],
+                duration: 450,
+                padding: 0.4,
+                maxZoom: 1.5,
+              });
+            }, 50);
+          }}
+          onCancel={cancelDraft}
+        />
+      ) : null}
     </div>
   );
 }

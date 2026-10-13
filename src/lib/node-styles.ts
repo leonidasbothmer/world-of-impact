@@ -32,4 +32,18 @@ export const NODE_TYPE_CONFIG: Record<
     text: "text-violet-900 dark:text-violet-100",
     dot: "bg-violet-500",
   },
+  academic: {
+    label: "Academic",
+    bg: "bg-amber-50 dark:bg-amber-950/40",
+    border: "border-amber-300 dark:border-amber-700",
+    text: "text-amber-900 dark:text-amber-100",
+    dot: "bg-amber-500",
+  },
+  media: {
+    label: "Media",
+    bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
+    border: "border-fuchsia-300 dark:border-fuchsia-700",
+    text: "text-fuchsia-900 dark:text-fuchsia-100",
+    dot: "bg-fuchsia-500",
+  },
 };

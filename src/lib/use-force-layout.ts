@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import {
-  forceCenter,
   forceCollide,
   forceLink,
   forceManyBody,
@@ -12,11 +11,12 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 import type { Node } from "@xyflow/react";
-import type { MindMapData } from "@/types/mindmap";
+import type { MindMapData, NodeType } from "@/types/mindmap";
 
 export type ForceSimNode = SimulationNodeDatum & {
   id: string;
   pinned?: boolean;
+  type?: NodeType;
 };
 
 type ForceSimLink = SimulationLinkDatum<ForceSimNode> & {
@@ -24,14 +24,295 @@ type ForceSimLink = SimulationLinkDatum<ForceSimNode> & {
 };
 
 function topologyKey(data: MindMapData): string {
+  const problems = data.nodes
+    .filter((node) => node.type === "problem")
+    .map((node) => node.id)
+    .join(",");
   return `${data.nodes.map((n) => n.id).join(",")}|${data.edges
     .map((e) => `${e.id}:${e.source}->${e.target}`)
-    .join(",")}`;
+    .join(",")}|${problems}`;
+}
+
+type ClusterTie = { id: string; dist: number };
+
+type ClusterModel = {
+  ties: Map<string, ClusterTie[]>;
+  exclusive: Map<string, string[]>;
+  cross: Map<string, number>;
+};
+
+function pairKey(a: string, b: string): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+/**
+ * Problems are clusters. A node belongs to every problem at its shortest
+ * hop-distance, so a bridge is pulled toward both. A connected group with
+ * no path to a problem is its own small cluster. Centers are not stored:
+ * the force recomputes them from live positions.
+ */
+function buildClusterModel(
+  nodes: { id: string; type?: string }[],
+  links: { source: string; target: string }[],
+): ClusterModel {
+  const adjacent = new Map<string, string[]>(nodes.map((node) => [node.id, []]));
+  for (const link of links) {
+    adjacent.get(link.source)?.push(link.target);
+    adjacent.get(link.target)?.push(link.source);
+  }
+  const problems = nodes.filter((node) => node.type === "problem").map((node) => node.id);
+  const hops = new Map<string, Map<string, number>>(
+    nodes.map((node) => [node.id, new Map()]),
+  );
+  for (const problemId of problems) {
+    const distance = new Map<string, number>([[problemId, 0]]);
+    const queue = [problemId];
+    while (queue.length > 0) {
+      const id = queue.shift();
+      if (!id) continue;
+      const depth = distance.get(id) ?? 0;
+      for (const next of adjacent.get(id) ?? []) {
+        if (distance.has(next)) continue;
+        distance.set(next, depth + 1);
+        queue.push(next);
+      }
+    }
+    for (const [id, depth] of distance) hops.get(id)?.set(problemId, depth);
+  }
+
+  const ties = new Map<string, ClusterTie[]>();
+  for (const node of nodes) {
+    if (node.type === "problem") {
+      ties.set(node.id, [{ id: node.id, dist: 0 }]);
+      continue;
+    }
+    const table = hops.get(node.id);
+    if (!table || table.size === 0) continue;
+    let best = Infinity;
+    for (const depth of table.values()) if (depth < best) best = depth;
+    ties.set(
+      node.id,
+      [...table.entries()]
+        .filter(([, depth]) => depth === best)
+        .map(([id, dist]) => ({ id, dist })),
+    );
+  }
+
+  const seen = new Set(ties.keys());
+  for (const node of nodes) {
+    if (seen.has(node.id)) continue;
+    const stack = [node.id];
+    seen.add(node.id);
+    const members: string[] = [];
+    while (stack.length > 0) {
+      const id = stack.pop();
+      if (!id) continue;
+      members.push(id);
+      for (const next of adjacent.get(id) ?? []) {
+        if (seen.has(next)) continue;
+        seen.add(next);
+        stack.push(next);
+      }
+    }
+    const root = members.reduce((smallest, id) => (id < smallest ? id : smallest));
+    for (const id of members) ties.set(id, [{ id: `c:${root}`, dist: 1 }]);
+  }
+
+  const exclusive = new Map<string, string[]>();
+  for (const [id, nodeTies] of ties) {
+    if (nodeTies.length !== 1) continue;
+    const clusterId = nodeTies[0].id;
+    const members = exclusive.get(clusterId) ?? [];
+    members.push(id);
+    exclusive.set(clusterId, members);
+  }
+  for (const nodeTies of ties.values()) {
+    for (const tie of nodeTies) {
+      if (!exclusive.has(tie.id)) exclusive.set(tie.id, []);
+    }
+  }
+
+  const cross = new Map<string, number>();
+  for (const link of links) {
+    const left = ties.get(link.source) ?? [];
+    const right = ties.get(link.target) ?? [];
+    const pairs = new Set<string>();
+    for (const a of left) {
+      for (const b of right) {
+        if (a.id !== b.id) pairs.add(pairKey(a.id, b.id));
+      }
+    }
+    for (const key of pairs) cross.set(key, (cross.get(key) ?? 0) + 1);
+  }
+
+  return { ties, exclusive, cross };
+}
+
+/**
+ * Holds each cluster around the live average of its own members. Whole yards
+ * push apart; shared links weaken that push, and a node tied to two problems
+ * drags both centers toward itself. Centers are never fixed.
+ */
+function forceClusters(model: ClusterModel) {
+  let nodes: ForceSimNode[] = [];
+  const byId = new Map<string, ForceSimNode>();
+  const pullAt = [0.08, 0.12, 0.05];
+  const repel = 28;
+  const reach = 1400;
+  const crossDamp = 0.8;
+  const constellation = 0.012;
+  const rimPad = 200;
+
+  function pullStrength(dist: number): number {
+    if (dist <= 0) return pullAt[0];
+    if (dist === 1) return pullAt[1];
+    return pullAt[2];
+  }
+
+  function force(alpha: number) {
+    const centroids = new Map<string, { x: number; y: number }>();
+    for (const [clusterId, memberIds] of model.exclusive) {
+      let sx = 0;
+      let sy = 0;
+      let count = 0;
+      for (const id of memberIds) {
+        const node = byId.get(id);
+        if (!node || node.x == null || node.y == null) continue;
+        sx += node.x;
+        sy += node.y;
+        count += 1;
+      }
+      if (count > 0) centroids.set(clusterId, { x: sx / count, y: sy / count });
+    }
+    if (centroids.size === 0) return;
+    let meanX = 0;
+    let meanY = 0;
+    for (const centroid of centroids.values()) {
+      meanX += centroid.x;
+      meanY += centroid.y;
+    }
+    meanX /= centroids.size;
+    meanY /= centroids.size;
+    const radii = [...centroids.values()]
+      .map((centroid) => Math.hypot(centroid.x - meanX, centroid.y - meanY))
+      .sort((a, b) => a - b);
+    const rim = (radii[Math.floor(radii.length * 0.75)] ?? 400) + rimPad;
+
+    const clusterIds = [...centroids.keys()];
+    const push = new Map(clusterIds.map((id) => [id, { x: 0, y: 0 }]));
+    for (let i = 0; i < clusterIds.length; i += 1) {
+      for (let j = i + 1; j < clusterIds.length; j += 1) {
+        const leftId = clusterIds[i];
+        const rightId = clusterIds[j];
+        const left = centroids.get(leftId);
+        const right = centroids.get(rightId);
+        if (!left || !right) continue;
+        let dx = left.x - right.x;
+        let dy = left.y - right.y;
+        let distance = Math.hypot(dx, dy);
+        if (distance < 1) {
+          dx = i - j || 1;
+          dy = j * 3 - i || 1;
+          distance = Math.hypot(dx, dy);
+        }
+        if (distance > reach) continue;
+        if (leftId.startsWith("c:") || rightId.startsWith("c:")) continue;
+        const crossCount = model.cross.get(pairKey(leftId, rightId)) ?? 0;
+        const factor = 1 / (1 + crossCount * crossDamp);
+        const magnitude = repel * factor * (1 - distance / reach) * alpha;
+        const leftPush = push.get(leftId);
+        const rightPush = push.get(rightId);
+        if (!leftPush || !rightPush) continue;
+        leftPush.x += (dx / distance) * magnitude;
+        leftPush.y += (dy / distance) * magnitude;
+        rightPush.x -= (dx / distance) * magnitude;
+        rightPush.y -= (dy / distance) * magnitude;
+      }
+    }
+
+    const drag = new Map(clusterIds.map((id) => [id, { x: 0, y: 0 }]));
+    for (const node of nodes) {
+      if (node.x == null || node.y == null) continue;
+      const ties = model.ties.get(node.id) ?? [];
+      if (ties.length < 2) continue;
+      for (const tie of ties) {
+        const centroid = centroids.get(tie.id);
+        const bucket = drag.get(tie.id);
+        if (!centroid || !bucket) continue;
+        const share = Math.max(model.exclusive.get(tie.id)?.length ?? 1, 1);
+        const strength = pullStrength(tie.dist) * alpha / share;
+        bucket.x += (node.x - centroid.x) * strength;
+        bucket.y += (node.y - centroid.y) * strength;
+      }
+    }
+
+    for (const node of nodes) {
+      if (node.fx != null || node.fy != null || node.x == null || node.y == null) continue;
+      const ties = model.ties.get(node.id) ?? [];
+      const satellite = ties.length === 1 && ties[0].id.startsWith("c:");
+      for (const tie of ties) {
+        const centroid = centroids.get(tie.id);
+        if (!centroid) continue;
+        const strength = pullStrength(tie.dist);
+        node.vx += (centroid.x - node.x) * strength * alpha;
+        node.vy += (centroid.y - node.y) * strength * alpha;
+      }
+      if (ties.length === 1) {
+        const shift = push.get(ties[0].id);
+        const follow = drag.get(ties[0].id);
+        if (shift) {
+          node.vx += shift.x;
+          node.vy += shift.y;
+        }
+        if (follow) {
+          node.vx += follow.x;
+          node.vy += follow.y;
+        }
+      }
+      if (satellite) {
+        const dx = meanX - node.x;
+        const dy = meanY - node.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        const gap = distance - rim * 0.92;
+        const gain = gap > 0 ? 0.35 : 0.08;
+        node.vx += (dx / distance) * gap * gain * alpha;
+        node.vy += (dy / distance) * gap * gain * alpha;
+      }
+      node.vx += (meanX - node.x) * constellation * alpha;
+      node.vy += (meanY - node.y) * constellation * alpha;
+    }
+  }
+
+  force.initialize = (next: ForceSimNode[]) => {
+    nodes = next;
+    byId.clear();
+    for (const node of next) byId.set(node.id, node);
+  };
+  return force;
+}
+
+/** Avatar tiles are narrower than the text boxes, so they need less personal space. */
+function collideRadius(node: ForceSimNode): number {
+  return node.type === "person" || node.type === "organization" ? 54 : 68;
+}
+
+/** Person↔person ties are visual only — they must not pull nodes in the layout. */
+export function isPersonPersonEdge(
+  edge: { source: string; target: string },
+  nodesById: Map<string, { type: string }> | Record<string, { type: string }>,
+): boolean {
+  const get = (id: string) =>
+    nodesById instanceof Map ? nodesById.get(id) : nodesById[id];
+  const source = get(edge.source);
+  const target = get(edge.target);
+  return source?.type === "person" && target?.type === "person";
 }
 
 /**
  * Runs a d3-force simulation and writes positions into React Flow nodes.
  * Unpinned nodes settle by links; pinned nodes stay fixed (fx/fy).
+ * Each problem keeps a cluster around a moving center. Shared links let
+ * related problems drift together; unrelated clusters stay apart.
  * New nodes from JSON/API join on the next topology restart.
  */
 export function useForceLayout({
@@ -49,6 +330,9 @@ export function useForceLayout({
   const nodesByIdRef = useRef<Map<string, ForceSimNode>>(new Map());
   const topoRef = useRef<string>("");
   const draggingRef = useRef<Set<string>>(new Set());
+  const pausedRef = useRef(false);
+  const pausedAlphaRef = useRef(0);
+  const reheatWhilePausedRef = useRef(false);
   const onSettledRef = useRef(onSettled);
   onSettledRef.current = onSettled;
 
@@ -58,6 +342,7 @@ export function useForceLayout({
     const key = topologyKey(data);
     const existing = nodesByIdRef.current;
     const nextMap = new Map<string, ForceSimNode>();
+    let reheat = false;
 
     for (const node of data.nodes) {
       const prev = existing.get(node.id);
@@ -70,11 +355,13 @@ export function useForceLayout({
         simNode.x = node.position.x;
         simNode.y = node.position.y;
       }
+      simNode.type = node.type;
       if (node.pinned) {
         simNode.pinned = true;
         simNode.fx = node.position.x;
         simNode.fy = node.position.y;
       } else if (!draggingRef.current.has(node.id)) {
+        if (simNode.pinned) reheat = true;
         simNode.pinned = false;
         simNode.fx = undefined;
         simNode.fy = undefined;
@@ -84,8 +371,12 @@ export function useForceLayout({
 
     nodesByIdRef.current = nextMap;
     const simNodes = Array.from(nextMap.values());
+    const typeById = new Map(
+      data.nodes.map((n) => [n.id, { type: n.type }] as const),
+    );
     const simLinks: ForceSimLink[] = data.edges
       .filter((e) => nextMap.has(e.source) && nextMap.has(e.target))
+      .filter((e) => !isPersonPersonEdge(e, typeById))
       .map((e) => ({
         id: e.id,
         source: e.source,
@@ -96,21 +387,36 @@ export function useForceLayout({
       topoRef.current = key;
       simRef.current?.stop();
 
+      const clusterModel = buildClusterModel(
+        simNodes,
+        simLinks.map((link) => ({
+          source: String(link.source),
+          target: String(link.target),
+        })),
+      );
       const simulation = forceSimulation<ForceSimNode>(simNodes)
         .force(
           "link",
           forceLink<ForceSimNode, ForceSimLink>(simLinks)
             .id((d) => d.id)
-            .distance(140)
-            .strength(0.55),
+            .distance(120)
+            .strength(0.45),
         )
-        .force("charge", forceManyBody().strength(-420))
-        .force("center", forceCenter(0, 0).strength(0.05))
-        .force("collide", forceCollide<ForceSimNode>().radius(56).strength(0.8))
+        .force(
+          "charge",
+          forceManyBody<ForceSimNode>().strength(-60).distanceMin(48).distanceMax(220),
+        )
+        .force("cluster", forceClusters(clusterModel))
+        .force(
+          "collide",
+          forceCollide<ForceSimNode>().radius(collideRadius).strength(0.9).iterations(2),
+        )
+        .velocityDecay(0.45)
         .alpha(1)
-        .alphaDecay(0.028);
+        .alphaDecay(0.022);
 
       simulation.on("tick", () => {
+        if (pausedRef.current) return;
         setNodes((current) =>
           current.map((flowNode) => {
             const simNode = nextMap.get(flowNode.id);
@@ -140,7 +446,12 @@ export function useForceLayout({
         typeof forceLink<ForceSimNode, ForceSimLink>
       > | null;
       linkForce?.links(simLinks);
+      if (reheat) {
+        if (pausedRef.current) reheatWhilePausedRef.current = true;
+        else simulation.alphaTarget(0).alpha(0.4).restart();
+      }
     }
+    if (pausedRef.current) simRef.current?.stop();
   }, [data, enabled, setNodes]);
 
   useEffect(() => {
@@ -158,7 +469,7 @@ export function useForceLayout({
         draggingRef.current.add(id);
         simNode.fx = x;
         simNode.fy = y;
-        simRef.current?.alphaTarget(0.25).restart();
+        if (!pausedRef.current) simRef.current?.alphaTarget(0.25).restart();
       },
       dragNode(id: string, x: number, y: number) {
         const simNode = nodesByIdRef.current.get(id);
@@ -176,8 +487,37 @@ export function useForceLayout({
           simNode.pinned = false;
           simNode.fx = undefined;
           simNode.fy = undefined;
-          simRef.current?.alphaTarget(0).alpha(0.35).restart();
+          if (!pausedRef.current) {
+            simRef.current?.alphaTarget(0).alpha(0.35).restart();
+          }
         }
+      },
+      pause() {
+        const sim = simRef.current;
+        pausedRef.current = true;
+        if (!sim) return;
+        pausedAlphaRef.current = sim.alpha();
+        sim.stop();
+      },
+      resume() {
+        pausedRef.current = false;
+        const sim = simRef.current;
+        const alpha = Math.max(
+          pausedAlphaRef.current,
+          reheatWhilePausedRef.current ? 0.4 : 0,
+        );
+        pausedAlphaRef.current = 0;
+        reheatWhilePausedRef.current = false;
+        if (!sim || alpha <= 0.05) return;
+        sim.alphaTarget(0).alpha(alpha).restart();
+      },
+      positions() {
+        const positions = new Map<string, { x: number; y: number }>();
+        for (const [id, node] of nodesByIdRef.current) {
+          if (node.x == null || node.y == null) continue;
+          positions.set(id, { x: node.x, y: node.y });
+        }
+        return positions;
       },
     }),
     [],

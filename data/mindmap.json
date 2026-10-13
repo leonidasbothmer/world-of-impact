@@ -2,386 +2,1563 @@
   "nodes": [
     {
       "id": "climate-change",
-      "name": "Climate change and adaptation",
+      "name": "Climate change",
       "type": "problem",
-      "notes": "Core impact area — mitigation and adaptation across sectors.",
+      "notes": "Core impact area — the climate crisis as a problem space.",
+      "position": {
+        "x": -1739.4918759237007,
+        "y": 1080.5201737903403
+      },
+      "pinned": false,
       "tags": [
         "climate",
         "impact"
-      ],
+      ]
+    },
+    {
+      "id": "adaptation",
+      "name": "Adaptation",
+      "type": "solution",
+      "notes": "Adapting cities, infrastructure, and systems to climate impacts already underway.",
       "position": {
-        "x": 484.3251351405223,
-        "y": 20.584236391199095
-      }
+        "x": -1883.7089896599907,
+        "y": 968.0406590767559
+      },
+      "pinned": false,
+      "tags": [
+        "climate",
+        "adaptation"
+      ]
+    },
+    {
+      "id": "mitigation",
+      "name": "Mitigation",
+      "type": "solution",
+      "notes": "Reducing greenhouse-gas emissions and slowing climate change — energy, buildings, mobility, nature.",
+      "position": {
+        "x": -1392.2234224946885,
+        "y": 1056.817091701842
+      },
+      "pinned": false,
+      "tags": [
+        "climate",
+        "mitigation"
+      ]
     },
     {
       "id": "energy-transformation",
       "name": "Energy transformation",
-      "type": "problem",
+      "type": "solution",
       "notes": "Transition to clean, resilient energy systems.",
+      "position": {
+        "x": -1044.1292776052085,
+        "y": 1353.0516860775829
+      },
+      "pinned": false,
+      "locations": [],
       "tags": [
         "energy",
         "climate"
-      ],
-      "position": {
-        "x": 545.1254793043411,
-        "y": 169.42446040492158
-      }
+      ]
     },
     {
       "id": "buildings",
       "name": "Buildings",
       "type": "solution",
       "notes": "Decarbonizing the built environment — efficiency, electrification, retrofit.",
+      "position": {
+        "x": -1466.2850915514846,
+        "y": 1160.8535356738103
+      },
+      "pinned": false,
       "tags": [
         "buildings",
         "sector"
-      ],
-      "position": {
-        "x": 433.34035741622006,
-        "y": 162.74928675372263
-      }
+      ]
     },
     {
       "id": "electricity",
       "name": "Electricity",
       "type": "solution",
       "notes": "Grid, renewables, and building electrification.",
+      "position": {
+        "x": -1301.044392539999,
+        "y": 1383.9345691603908
+      },
+      "pinned": false,
       "tags": [
         "energy",
         "buildings"
-      ],
-      "position": {
-        "x": 611.0634092721929,
-        "y": 75.49311808339577
-      }
+      ]
     },
     {
       "id": "heating",
       "name": "Heating",
       "type": "solution",
       "notes": "Heat pumps, district heat, and thermal efficiency.",
+      "position": {
+        "x": -1276.6807078449192,
+        "y": 1291.629516046673
+      },
       "tags": [
         "energy",
         "buildings"
-      ],
-      "position": {
-        "x": 431.2915515308081,
-        "y": 300.9880696941899
-      }
+      ]
     },
     {
       "id": "urban-development",
       "name": "Urban development",
-      "type": "problem",
+      "type": "solution",
       "notes": "Sustainable cities, mobility, and civic infrastructure.",
+      "position": {
+        "x": -1597.1552225634882,
+        "y": 823.3156750854347
+      },
+      "pinned": false,
       "tags": [
         "cities",
         "urban"
-      ],
-      "position": {
-        "x": 279.10103122621734,
-        "y": 67.65031156464985
-      }
+      ]
     },
     {
       "id": "finance",
       "name": "Finance",
       "type": "problem",
       "notes": "Capital allocation for impact — green finance, impact investing.",
+      "position": {
+        "x": -1858.6191458456842,
+        "y": 2329.0912490375995
+      },
+      "pinned": false,
       "tags": [
         "finance",
         "sector"
-      ],
-      "position": {
-        "x": 621.6228078797524,
-        "y": -93.05770558249961
-      }
+      ]
     },
     {
       "id": "health",
       "name": "Health",
       "type": "problem",
       "notes": "Healthcare delivery, aging populations, and digital health.",
+      "position": {
+        "x": -2533.4210036586733,
+        "y": 548.3864858182408
+      },
       "tags": [
         "health",
         "sector"
-      ],
-      "position": {
-        "x": -1780.2035016160257,
-        "y": -569.6438547145284
-      }
+      ]
     },
     {
       "id": "dark-matter-labs",
       "name": "Dark Matter Labs",
       "type": "organization",
       "notes": "Urban innovation lab — systemic change in cities.",
+      "orgKind": "NGO",
+      "website": "https://darkmatterlabs.org",
+      "linkedIn": "https://www.linkedin.com/company/darkmatterlabs",
+      "position": {
+        "x": -1751.026273916513,
+        "y": 672.451229195486
+      },
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D560BAQHyQyLnziJ5IA/company-logo_200_200/company-logo_200_200/0/1733836718865/darkmatterlabs_logo?e=1791417600&v=beta&t=7xPEKXiDkZkpUhEyziafJ2FihCoiUx6RvUV8e7TCgYM",
       "tags": [
         "urban",
         "lab"
-      ],
-      "orgKind": "NGO",
-      "website": "https://darkmatterlabs.org",
-      "position": {
-        "x": 77.94044146993555,
-        "y": 71.17997036142752
-      }
+      ]
     },
     {
       "id": "autarc",
       "name": "Autarc",
       "type": "organization",
       "notes": "Heat pump and building decarbonization software.",
+      "orgKind": "startup",
+      "website": "https://autarc.energy",
+      "linkedIn": "https://www.linkedin.com/company/autarc-energy",
+      "position": {
+        "x": -1381.012661555015,
+        "y": 1382.6200767854673
+      },
+      "pinned": false,
       "tags": [
         "startup",
         "heating",
         "buildings"
-      ],
-      "orgKind": "startup",
-      "website": "https://autarc.energy",
-      "position": {
-        "x": 612.2768600191805,
-        "y": 259.03866995918037
-      }
+      ]
     },
     {
       "id": "reonic",
       "name": "Reonic",
       "type": "organization",
       "notes": "Energy management and building optimization.",
+      "orgKind": "startup",
+      "website": "https://reonic.com",
+      "linkedIn": "https://www.linkedin.com/company/reonic",
+      "position": {
+        "x": -1460.8448383586447,
+        "y": 1377.6025124151492
+      },
+      "pinned": false,
       "tags": [
         "startup",
         "buildings",
         "energy"
-      ],
-      "orgKind": "startup",
-      "website": "https://reonic.com",
-      "position": {
-        "x": 535.9041599435438,
-        "y": 340.9491493652314
-      }
+      ]
     },
     {
       "id": "voize",
       "name": "Voize",
       "type": "organization",
       "notes": "Voice AI for care documentation in healthcare.",
+      "orgKind": "startup",
+      "website": "https://voize.de",
+      "linkedIn": "https://www.linkedin.com/company/voize-de",
+      "position": {
+        "x": -3037.9292665810467,
+        "y": 327.1298165734824
+      },
       "tags": [
         "startup",
         "health"
-      ],
-      "orgKind": "startup",
-      "website": "https://voize.de",
-      "position": {
-        "x": -1781.2341208434498,
-        "y": -721.7307171637614
-      }
+      ]
     },
     {
       "id": "praxipal",
       "name": "Praxipal",
       "type": "organization",
       "notes": "Digital health platform for practices and patients.",
+      "orgKind": "scaleup",
+      "website": "https://praxipal.com",
+      "linkedIn": "https://www.linkedin.com/company/praxipal",
+      "position": {
+        "x": -3078.641185112006,
+        "y": 463.92941103229515
+      },
       "tags": [
         "startup",
         "health"
-      ],
-      "orgKind": "scaleup",
-      "website": "https://praxipal.com",
-      "position": {
-        "x": -1881.6498504832268,
-        "y": -456.0271051693446
-      }
-    },
-    {
-      "id": "aleksander-nowak",
-      "name": "Aleksander Nowak",
-      "type": "person",
-      "notes": "Contact linked to Dark Matter Labs and Nancy Birkhölzer. LinkedIn OG image unavailable without auth; local placeholder avatar used.",
-      "tags": [
-        "contact",
-        "urban"
-      ],
-      "linkedIn": "https://www.linkedin.com/in/aleksander-nowak-008b9357/",
-      "imageUrl": "/avatars/aleksander-nowak.svg",
-      "position": {
-        "x": -35.110358553268526,
-        "y": 202.9873963982365
-      },
-      "pinned": false
-    },
-    {
-      "id": "nancy-birkholzer",
-      "name": "Nancy Birkhölzer",
-      "type": "person",
-      "notes": "Entrepreneur / design & innovation leader; connected to Dream Mobility. Spelling on LinkedIn is Birkhölzer (ö). Avatar is remote LinkedIn OG image (hotlink by reference).",
-      "tags": [
-        "contact",
-        "mobility",
-        "innovation",
-        "contacted"
-      ],
-      "linkedIn": "https://www.linkedin.com/in/nancyb1",
-      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E03AQE96u5SVzIVqw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1726557378134?e=2147483647&v=beta&t=31sgt42Pdu1tQ0E3MMVF8riaOsX0P01mDyPOA8kOYUM",
-      "position": {
-        "x": 120.03546962927551,
-        "y": 260.4767413605016
-      }
+      ]
     },
     {
       "id": "dream-mobility",
       "name": "Dream Mobility",
       "type": "organization",
       "notes": "Berlin-based mobility venture (dream Mobility GmbH) focused on passenger night-train and related mobility services. No public marketing website listed in lobby register (n/a); contact domain dreammobility.eu.",
+      "orgKind": "startup",
+      "position": {
+        "x": -852.4903738339841,
+        "y": 1402.9231169827638
+      },
+      "pinned": false,
       "tags": [
         "mobility",
         "startup"
-      ],
-      "orgKind": "startup",
-      "position": {
-        "x": 230.20408381042935,
-        "y": 350.26183224074197
-      }
+      ]
     },
     {
       "id": "open-mobility",
-      "name": "Open Mobility",
-      "type": "problem",
+      "name": "Mobility",
+      "type": "solution",
       "notes": "Domain/problem space around open, shared, and climate-aligned mobility systems.",
+      "position": {
+        "x": -1262.919496956336,
+        "y": 849.1588266412748
+      },
+      "pinned": false,
       "tags": [
         "mobility",
         "climate",
         "domain"
-      ],
-      "position": {
-        "x": 306.3511596832363,
-        "y": 176.28132718643553
-      }
+      ]
     },
     {
       "id": "resilient-cities",
       "name": "Resilient Cities",
-      "type": "problem",
+      "type": "solution",
       "notes": "Urban resilience — adapting cities to climate risk, infrastructure stress, and social systems under change.",
+      "position": {
+        "x": -1781.3356791193683,
+        "y": 831.1610519630282
+      },
+      "pinned": false,
       "tags": [
         "cities",
         "climate",
         "adaptation"
-      ],
-      "position": {
-        "x": 336.5900489718969,
-        "y": -98.94138241574068
-      }
+      ]
     },
     {
       "id": "open-systems-lab",
       "name": "Open Systems Lab",
       "type": "organization",
       "notes": "Non-profit R&D lab redesigning societal operating systems (WikiHouse, PlanX, Fairhold, BuildX). See https://www.opensystemslab.io/about",
+      "orgKind": "NGO",
+      "website": "https://www.opensystemslab.io/",
+      "linkedIn": "https://www.linkedin.com/company/open-systems-lab/",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFzsOCG6-357Q/company-logo_200_200/company-logo_200_200/0/1662483549293/open_systems_lab_logo?e=2147483647&v=beta&t=uToRt4XKLkJK-aSXyAExJe_osePhhiSWrGqA1aUQQNM",
+      "pinned": false,
+      "position": {
+        "x": -1549.6524447746312,
+        "y": 990.2260853791678
+      },
       "tags": [
         "urban",
         "lab",
         "open-source",
         "construction"
-      ],
-      "orgKind": "NGO",
-      "website": "https://www.opensystemslab.io/",
-      "linkedIn": "https://www.linkedin.com/company/open-systems-lab",
-      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFzsOCG6-357Q/company-logo_200_200/company-logo_200_200/0/1662483549293/open_systems_lab_logo?e=2147483647&v=beta&t=uToRt4XKLkJK-aSXyAExJe_osePhhiSWrGqA1aUQQNM",
-      "pinned": false,
-      "position": {
-        "x": 373.1872419326117,
-        "y": 6.904404092781003
-      }
-    },
-    {
-      "id": "simon-hoeher",
-      "name": "Simon Hoeher",
-      "type": "person",
-      "notes": "Contact connected to Dark Matter Labs. Avatar remote LinkedIn OG image (hotlink).",
-      "tags": [
-        "contacted",
-        "contact",
-        "urban"
-      ],
-      "linkedIn": "https://www.linkedin.com/in/simonhoeher/",
-      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E03AQGUdpfvAoaA9A/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1685194034317?e=2147483647&v=beta&t=SbhxbNe-6Q-Mn4t1hwiib5sw7OUctSciFjRuwg9hL_Q",
-      "pinned": false,
-      "position": {
-        "x": -92.59026031740602,
-        "y": 26.6823855549102
-      }
-    },
-    {
-      "id": "manuel-kilian",
-      "name": "Manuel Kilian",
-      "type": "person",
-      "notes": "GovTech / digital government (GovMind, Global Government Technology Centre). Avatar remote LinkedIn OG image (hotlink).",
-      "tags": [
-        "contact",
-        "govtech"
-      ],
-      "linkedIn": "https://www.linkedin.com/in/manuelkilian",
-      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D03AQESt1fUtkcl4Q/profile-displayphoto-scale_200_200/B4DaBzacR2KkAg-/0/1788642708075?e=2147483647&v=beta&t=7BypjND40tyBpwp6IcLGhI5iTZmZgUFnai8-SRYF0eg",
-      "pinned": false,
-      "position": {
-        "x": -1442.373511365973,
-        "y": -32.72633728724996
-      }
-    },
-    {
-      "id": "rene-schaefer",
-      "name": "René Schäfer",
-      "type": "person",
-      "notes": "Co-founder of Nature Wealth (nature finance / biodiversity). Avatar remote LinkedIn OG image (hotlink).",
-      "tags": [
-        "contacted",
-        "contact",
-        "nature-finance"
-      ],
-      "linkedIn": "https://www.linkedin.com/in/rene-schaefer",
-      "imageUrl": "https://media.licdn.com/dms/image/v2/C4E03AQEvqQRdBVtUnw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1661458019946?e=2147483647&v=beta&t=FS4kgK08Veqx-4oBflU0Mqq_WB0keB7cAuoGgut_z94",
-      "pinned": false,
-      "position": {
-        "x": 511.0199115399925,
-        "y": -348.6611615163454
-      }
+      ]
     },
     {
       "id": "nature-wealth",
       "name": "Nature Wealth",
       "type": "organization",
       "notes": "Non-profit foundation for high-integrity biodiversity credit development and nature finance strategies.",
-      "tags": [
-        "nature",
-        "finance",
-        "biodiversity"
-      ],
       "orgKind": "NGO",
       "website": "https://nature-wealth.org/",
       "linkedIn": "https://www.linkedin.com/company/nature-wealth",
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQGi1Bl1A0sHKg/company-logo_200_200/B4DZeCkQl2HAAI-/0/1750242233132/nature_wealth_logo?e=2147483647&v=beta&t=cfGTCe26PgOyXJqHnQp_BshpZPc7MwktU-OqjmAylnc",
       "pinned": false,
       "position": {
-        "x": 504.886455745215,
-        "y": -170.64862638750208
+        "x": -2200.3769684208155,
+        "y": 2081.0552458411657
+      },
+      "tags": [
+        "nature",
+        "finance",
+        "biodiversity"
+      ]
+    },
+    {
+      "id": "govtech",
+      "name": "GovTech",
+      "type": "solution",
+      "notes": "Digital government / public-sector technology domain.",
+      "position": {
+        "x": -1728.7462444144091,
+        "y": 111.51241324115017
+      },
+      "tags": [
+        "govtech"
+      ]
+    },
+    {
+      "id": "bureaucracy",
+      "name": "Bureaucracy",
+      "type": "problem",
+      "notes": "Administrative friction and legacy process in government.",
+      "position": {
+        "x": -1800.0254017421892,
+        "y": 210.42959617727644
+      },
+      "tags": [
+        "govtech"
+      ]
+    },
+    {
+      "id": "urban-health",
+      "name": "Urban health",
+      "type": "problem",
+      "notes": "Health outcomes shaped by cities, housing, mobility, and environment.",
+      "position": {
+        "x": -2015.1129840670478,
+        "y": 701.9155979721696
+      },
+      "tags": [
+        "health",
+        "urban"
+      ]
+    },
+    {
+      "id": "wermuth-asset-management",
+      "name": "Wermuth Asset Management",
+      "type": "organization",
+      "notes": "Impact / climate-aligned asset management.",
+      "linkedIn": "https://www.linkedin.com/company/wermuth-asset-management",
+      "website": "https://wermutham.com",
+      "position": {
+        "x": -1394.0796787271572,
+        "y": 2227.9684901024934
+      },
+      "tags": [
+        "climate",
+        "finance"
+      ]
+    },
+    {
+      "id": "switchcoal",
+      "name": "Switchcoal",
+      "type": "organization",
+      "notes": "Coal-to-clean / energy transition initiative.",
+      "orgKind": "startup",
+      "linkedIn": "https://www.linkedin.com/company/switchcoal",
+      "website": "https://www.switchcoal.org",
+      "position": {
+        "x": -899.2935083222603,
+        "y": 1885.6079082687945
+      },
+      "pinned": false,
+      "tags": [
+        "climate",
+        "startup"
+      ]
+    },
+    {
+      "id": "landbanking-group",
+      "name": "Landbanking Group",
+      "type": "organization",
+      "notes": "Land / nature-related asset approaches.",
+      "orgKind": "startup",
+      "linkedIn": "https://www.linkedin.com/company/the-landbanking-group",
+      "website": "https://thelandbankinggroup.com",
+      "position": {
+        "x": -2327.9463419768836,
+        "y": 1887.4931439978377
+      },
+      "tags": [
+        "climate",
+        "startup"
+      ]
+    },
+    {
+      "id": "biodiversity-as-asset",
+      "name": "Biodiversity as an asset",
+      "type": "solution",
+      "notes": "Treating biodiversity and ecosystems as investable / stewarded assets.",
+      "position": {
+        "x": -2153.132871053677,
+        "y": 1790.6412838966146
+      },
+      "tags": [
+        "biodiversity",
+        "nature"
+      ]
+    },
+    {
+      "id": "biodiversity-loss",
+      "name": "Biodiversity loss",
+      "type": "problem",
+      "notes": "Collapse of ecosystems and species — linked to climate change.",
+      "position": {
+        "x": -1961.744008896926,
+        "y": 1459.8346641647418
+      },
+      "pinned": false,
+      "tags": [
+        "biodiversity",
+        "climate"
+      ]
+    },
+    {
+      "id": "tactical-tech",
+      "name": "Tactical Tech",
+      "type": "organization",
+      "notes": "Berlin-based nonprofit exploring the social, political, and environmental impacts of technology. Climate & AI / information-and-climate workstream. Hiring: https://www.linkedin.com/company/tactical-tech/jobs/",
+      "orgKind": "NGO",
+      "website": "https://tacticaltech.org/",
+      "linkedIn": "https://www.linkedin.com/company/tactical-tech/",
+      "position": {
+        "x": -2280.1660959478986,
+        "y": 1222.7711575676178
+      },
+      "tags": [
+        "climate",
+        "tech",
+        "NGO"
+      ]
+    },
+    {
+      "id": "doctolib-1789460550490",
+      "name": "Doctolib",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -3139.788158125822,
+        "y": 370.6285119585115
       }
+    },
+    {
+      "id": "solar-1789461033231",
+      "name": "Solar",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1399.5276675902635,
+        "y": 1590.579107674367
+      },
+      "pinned": false
+    },
+    {
+      "id": "nomos-1789461225070",
+      "name": "Nomos",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1184.9515416037905,
+        "y": 1536.3560487289367
+      },
+      "pinned": false
+    },
+    {
+      "id": "1komma5-1789461305372",
+      "name": "1Komma5",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1268.665050012586,
+        "y": 1570.7662234437325
+      },
+      "locations": [
+        "Berlin"
+      ]
+    },
+    {
+      "id": "hems-1789461365680",
+      "name": "HEMS",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1249.9655578509512,
+        "y": 1455.2329044982248
+      }
+    },
+    {
+      "id": "cloover-1789461470127",
+      "name": "Cloover",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1526.8292496251709,
+        "y": 1917.5271603159113
+      }
+    },
+    {
+      "id": "govtech-deutschland-1789461533761",
+      "name": "GovTech Deutschland",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1783.2314441847386,
+        "y": -124.09412770740529
+      }
+    },
+    {
+      "id": "n26-1789461637637",
+      "name": "N26",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": 16463.14940023645,
+        "y": -12543.774115788448
+      }
+    },
+    {
+      "id": "digital-health",
+      "name": "Digital health",
+      "type": "solution",
+      "notes": "Digital tools for care delivery, documentation, and patient access.",
+      "position": {
+        "x": -2903.2024980509386,
+        "y": 440.6973928700408
+      },
+      "tags": [
+        "health",
+        "digital"
+      ]
+    },
+    {
+      "id": "nature-finance",
+      "name": "Nature finance",
+      "type": "solution",
+      "notes": "Capital structures for nature and biodiversity — credits, stewardship, land value.",
+      "position": {
+        "x": -2056.9716056603916,
+        "y": 2261.024134124814
+      },
+      "tags": [
+        "finance",
+        "nature",
+        "biodiversity"
+      ]
+    },
+    {
+      "id": "climate-finance",
+      "name": "Climate finance",
+      "type": "solution",
+      "notes": "Capital for the energy transition and climate-aligned assets.",
+      "position": {
+        "x": -1660.3538694980252,
+        "y": 2209.2503765027595
+      },
+      "tags": [
+        "finance",
+        "climate"
+      ]
+    },
+    {
+      "id": "coal-to-clean",
+      "name": "Coal-to-clean",
+      "type": "solution",
+      "notes": "Replacing coal generation with clean power and a just transition.",
+      "position": {
+        "x": -947.8849101123606,
+        "y": 1634.4304786907899
+      },
+      "tags": [
+        "energy",
+        "climate"
+      ]
+    },
+    {
+      "id": "climate-information",
+      "name": "Climate information",
+      "type": "solution",
+      "notes": "Public understanding of climate and the environmental impact of technology.",
+      "position": {
+        "x": -2010.7813116543332,
+        "y": 1158.119894850748
+      },
+      "pinned": false,
+      "tags": [
+        "climate",
+        "tech"
+      ]
+    },
+    {
+      "id": "evs-1789462505919",
+      "name": "EVs",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1135.25603578753,
+        "y": 1005.7735257821823
+      }
+    },
+    {
+      "id": "bidirectional-charging-1789462585251",
+      "name": "bidirectional charging",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1135.6018075073875,
+        "y": 1242.3491671297293
+      },
+      "pinned": false
+    },
+    {
+      "id": "car-sharing-1789462657756",
+      "name": "Car Sharing",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -869.7136921519296,
+        "y": 358.38521408110194
+      }
+    },
+    {
+      "id": "miles-1789462686243",
+      "name": "Miles",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -765.1510965068038,
+        "y": 189.66350434514982
+      }
+    },
+    {
+      "id": "sharing-concepts-1789462739435",
+      "name": "Sharing Concepts",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1003.1802703383738,
+        "y": 584.7891862691146
+      }
+    },
+    {
+      "id": "bike-sharing-1789462777461",
+      "name": "Bike Sharing",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -849.935795815897,
+        "y": 435.8937976216507
+      }
+    },
+    {
+      "id": "e-scooters-1789462803845",
+      "name": "e-Scooters",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -788.4051551799794,
+        "y": 487.0158815766809
+      },
+      "pinned": false
+    },
+    {
+      "id": "bolt-1789462812740",
+      "name": "Bolt",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -703.415975018404,
+        "y": 327.22360295400136
+      },
+      "pinned": false
+    },
+    {
+      "id": "public-transport-1789462833694",
+      "name": "Public Transport",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1136.428767841012,
+        "y": 720.085108158894
+      },
+      "pinned": false,
+      "tags": [
+        "ÖPNV"
+      ]
+    },
+    {
+      "id": "nox-mobility-1789463047972",
+      "name": "nox Mobility",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -821.6020041300521,
+        "y": 1027.6791815849544
+      },
+      "pinned": false
+    },
+    {
+      "id": "night-trains-1789463059254",
+      "name": "night trains",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1009.5092747655256,
+        "y": 1076.664823651299
+      },
+      "pinned": false,
+      "tags": [
+        "emissions"
+      ]
+    },
+    {
+      "id": "proton-1789463294860",
+      "name": "Proton",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1525.1501315723517,
+        "y": -314.41082668537166
+      }
+    },
+    {
+      "id": "privacy-1789464800934",
+      "name": "Privacy",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1519.7363780377443,
+        "y": -115.21937887498972
+      },
+      "pinned": false
+    },
+    {
+      "id": "surveillance-capitalism-1789464815207",
+      "name": "Surveillance Capitalism",
+      "type": "problem",
+      "notes": "",
+      "position": {
+        "x": -1443.8118192928973,
+        "y": -299.79876378417435
+      },
+      "pinned": false
+    },
+    {
+      "id": "sustainable-cities-1789465064288",
+      "name": "Sustainable Cities",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1491.2391228728122,
+        "y": 705.4269440606985
+      },
+      "pinned": false
+    },
+    {
+      "id": "berlin-21-1789465072299",
+      "name": "Berlin 21",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1403.7315010000918,
+        "y": 542.7040020055182
+      },
+      "pinned": false
+    },
+    {
+      "id": "fairphone-1789465190628",
+      "name": "Fairphone",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": 2940.8585685099747,
+        "y": -17644.535637283654
+      }
+    },
+    {
+      "id": "vrey-1789465226648",
+      "name": "Vrey",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1451.557210406643,
+        "y": 1769.2116447937708
+      },
+      "pinned": false,
+      "website": "https://vrey.io/"
+    },
+    {
+      "id": "energy-efficiency-renovation-1789465277057",
+      "name": "Energy-efficiency renovation",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1641.78428219139,
+        "y": 1258.626049184677
+      },
+      "pinned": false
+    },
+    {
+      "id": "varm-1789465298781",
+      "name": "VARM",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1763.4290640389102,
+        "y": 1401.8161593589246
+      },
+      "pinned": false
+    },
+    {
+      "id": "irights-lab",
+      "name": "iRights.Lab",
+      "type": "organization",
+      "notes": "Independent Berlin think tank at the intersection of law, technology, politics, and society. 35+ experts; digital policy, AI ethics & regulation, digital administration, literacy, open knowledge, democratic participation. Collaborated with CityLAB on Digital Vereint and shared stages on public-sector AI.",
+      "orgKind": "NGO",
+      "website": "https://irights-lab.de/",
+      "linkedIn": "https://www.linkedin.com/company/irights-lab",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQHbJUfdv_dTwg/company-logo_200_200/B4EZ2RvA0XGYAI-/0/1776266514119/irights_lab_logo?e=2147483647&v=beta&t=9QpADe7CEYm3DO20EUClWJq5z3kH_c91hGKOpn6iBRg",
+      "position": {
+        "x": -1575.9884610930337,
+        "y": 131.95249314092885
+      },
+      "tags": [
+        "govtech",
+        "AI",
+        "digital-rights",
+        "Berlin",
+        "think-tank"
+      ]
+    },
+    {
+      "id": "citylab-berlin",
+      "name": "CityLAB Berlin",
+      "type": "organization",
+      "notes": "Berlin's public innovation lab (Technologiestiftung Berlin; funded by Senate Chancellery). Prototypes digital admin & smart-city tools with citizens and administration — BärGPT, Parla, Kiezlabor, Gieß den Kiez. Co-authored Öffentliches Gestalten handbook with Politics for Tomorrow; partnered with iRights.Lab on Digital Vereint.",
+      "orgKind": "NGO",
+      "website": "https://citylab-berlin.org/",
+      "linkedIn": "https://www.linkedin.com/company/citylab-berlin",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQEUharpzpezOQ/company-logo_200_200/B4DZ5Kzbo3JYAI-/0/1779371457335/citylab_berlin_logo?e=2147483647&v=beta&t=bMFg7tb2KaWuwY7DcMnarhlo4sZ4bqMUeUyXW0Y8Hu0",
+      "position": {
+        "x": -1637.9337251552106,
+        "y": 411.06994884612305
+      },
+      "tags": [
+        "govtech",
+        "urban",
+        "lab",
+        "Berlin",
+        "civic-tech"
+      ]
+    },
+    {
+      "id": "politics-for-tomorrow",
+      "name": "Politics for Tomorrow",
+      "type": "organization",
+      "notes": "Non-partisan Berlin initiative (c/o nextlearning e.V.) building public-sector innovation capacity for human and planetary wellbeing. Public service design, cross-sector alliances, organizational learning. Co-created Öffentliches Gestalten with CityLAB; involved in Berlin Smart City / Gemeinsam Digital work.",
+      "orgKind": "NGO",
+      "website": "https://www.politicsfortomorrow.de/",
+      "linkedIn": "https://www.linkedin.com/company/politicsfortomorrow",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQG1eyPhE7sKTA/company-logo_200_200/B4DaCbDbOmHUAE-/0/1789307761790/politicsfortomorrow_logo?e=2147483647&v=beta&t=JSn7Isob1SY5BOptGwuh9jNtVbeYsqf7oQomILtCECA",
+      "position": {
+        "x": -1651.05008486222,
+        "y": 232.37478695602138
+      },
+      "pinned": false,
+      "tags": [
+        "govtech",
+        "public-innovation",
+        "Berlin",
+        "design"
+      ]
+    },
+    {
+      "id": "a-color-bright",
+      "name": "A Color Bright",
+      "type": "organization",
+      "notes": "Berlin brand and product design studio (founded 2013). Partners with startups to global consumer brands on brand development, UX/UI, and digital product discovery. info@acolorbright.com",
+      "orgKind": "agency",
+      "website": "https://acolorbright.com/",
+      "linkedIn": "https://www.linkedin.com/company/a-color-bright",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQHC080skZxvMQ/company-logo_200_200/B4DZyZfFJlG0AI-/0/1772101588110/a_color_bright_logo?e=2147483647&v=beta&t=nOtzMjxd7kUX5QwV1CWXvPBba0-R0Vg8DytXDeBSgBg",
+      "position": {
+        "x": 11301.644417093248,
+        "y": -9587.250559743026
+      },
+      "locations": [
+        "Berlin"
+      ],
+      "tags": [
+        "design",
+        "brand",
+        "agency",
+        "Berlin"
+      ]
+    },
+    {
+      "id": "information-architects",
+      "name": "Information Architects",
+      "type": "organization",
+      "notes": "iA / Information Architects — design & software company (Zurich product team; Tokyo UXD for Japanese market). Focused writing and presentation tools (iA Writer, iA Presenter). ia@ia.net · ia.net",
+      "orgKind": "startup",
+      "website": "https://ia.net/",
+      "linkedIn": "https://www.linkedin.com/company/information-architects-gmbh",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQE45ZWW7yS6eg/company-logo_200_200/company-logo_200_200/0/1687853638364/information_architects_gmbh_logo?e=2147483647&v=beta&t=HkO6jKxPL39KlR7ok7sMY9VaOskXYsIW4TGohglH_vQ",
+      "position": {
+        "x": 15974.12308543196,
+        "y": 5679.6674218084345
+      },
+      "tags": [
+        "design",
+        "software",
+        "typography"
+      ]
+    },
+    {
+      "id": "zalando",
+      "name": "Zalando",
+      "type": "organization",
+      "notes": "Europe's leading online fashion & lifestyle platform; founded Berlin 2008. Large product-design organization (platform, apps, enterprise tools).",
+      "orgKind": "scaleup",
+      "website": "https://www.zalando.com/",
+      "linkedIn": "https://www.linkedin.com/company/zalando",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQHf99h003cqpQ/company-logo_200_200/B4DaCfS6oyKwAM-/0/1789378931678/zalando_logo?e=2147483647&v=beta&t=hv8Dd9PgtcJFDwKjsH2cenSS6KM7CN8iQuleTRSBTmo",
+      "position": {
+        "x": 4658.307818640018,
+        "y": -14664.25287520827
+      },
+      "tags": [
+        "fashion",
+        "ecommerce",
+        "Berlin",
+        "scaleup"
+      ]
+    },
+    {
+      "id": "gnome-1789635266682",
+      "name": "Gnome",
+      "type": "solution",
+      "notes": "Gnome is a free interface for linux",
+      "position": {
+        "x": 470.8969324050006,
+        "y": 2453.0463275394086
+      },
+      "pinned": false,
+      "locations": []
+    },
+    {
+      "id": "https-www-ecoworks-tech-1789635699159",
+      "name": "Ecoworks",
+      "type": "organization",
+      "notes": "Serielle Fassaden-Sanierung",
+      "position": {
+        "x": -1816.3672713665937,
+        "y": 1327.4599351029283
+      },
+      "website": "https://www.ecoworks.tech/"
+    },
+    {
+      "id": "global-government-technology-center-1789635851412",
+      "name": "Global Government Technology Center",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1983.4124212624363,
+        "y": -182.15826200856782
+      },
+      "pinned": false,
+      "linkedIn": "https://www.linkedin.com/company/global-government-technology-centre/posts/?feedView=all",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFY-ckNX2y7GA/company-logo_200_200/company-logo_200_200/0/1727097248253/global_government_technology_centre_logo?e=1791417600&v=beta&t=--7sAsl4PJ5ELHQss-3ayJwwFUgvGqdSvh2B4Yr2cR8"
+    },
+    {
+      "id": "design-agencies",
+      "name": "Design agencies",
+      "type": "solution",
+      "notes": "Studios and agencies for product, brand, and invention design.",
+      "position": {
+        "x": 11413.417702101513,
+        "y": -9481.669673126462
+      },
+      "tags": [
+        "design",
+        "agency"
+      ]
+    },
+    {
+      "id": "special-projects",
+      "name": "Special Projects",
+      "type": "organization",
+      "notes": "London design and invention agency founded in 2014 by Clara Gaggero Westaway and Adrian Westaway. Research, creative technology, and product invention for companies such as Google, Samsung, BBC, LEGO, and Sonos. B Corp. Studio in Richmond, London.",
+      "orgKind": "agency",
+      "website": "https://specialprojects.studio/",
+      "linkedIn": "https://www.linkedin.com/company/special-projects-innovation-studio",
+      "locations": [
+        "London"
+      ],
+      "position": {
+        "x": 11566.48074642108,
+        "y": -9492.511361650579
+      },
+      "tags": [
+        "design",
+        "agency",
+        "invention"
+      ]
+    },
+    {
+      "id": "pilotfish",
+      "name": "Pilotfish",
+      "type": "organization",
+      "notes": "Product design and hardware development agency (founded 2000). Industrial design, engineering, and manufacturing support for MedTech and technology products. Studios in Berlin, Amsterdam, Taipei, and Lisbon.",
+      "orgKind": "agency",
+      "website": "https://www.pilotfish.eu/",
+      "linkedIn": "https://www.linkedin.com/company/pilotfish",
+      "locations": [
+        "Berlin",
+        "Amsterdam",
+        "Taipei",
+        "Lisbon"
+      ],
+      "position": {
+        "x": 11419.921292298011,
+        "y": -9328.342961860692
+      },
+      "tags": [
+        "design",
+        "agency",
+        "hardware"
+      ]
+    },
+    {
+      "id": "anti-bigtech-1790090072110",
+      "name": "Monopolistic Platforms",
+      "type": "problem",
+      "notes": "",
+      "position": {
+        "x": 438.8887051957437,
+        "y": 1834.4572047216207
+      },
+      "pinned": false,
+      "locations": []
+    },
+    {
+      "id": "regulation-1790090153901",
+      "name": "Platform Regulation",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": 712.9830484427351,
+        "y": 1799.1039216774236
+      },
+      "pinned": false,
+      "locations": []
+    },
+    {
+      "id": "linux-1790090268528",
+      "name": "Linux",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": 340.21189464048234,
+        "y": 2254.2758475686014
+      },
+      "pinned": false
+    },
+    {
+      "id": "open-source-1790090297399",
+      "name": "Open Source",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": 190.93517045226997,
+        "y": 2024.1760336209875
+      },
+      "pinned": false,
+      "locations": []
+    },
+    {
+      "id": "free-software-1790090318058",
+      "name": "Free Software",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": 252.1965178508257,
+        "y": 2185.802227433777
+      },
+      "pinned": false
+    },
+    {
+      "id": "thermondo-1790090370396",
+      "name": "Thermondo",
+      "type": "organization",
+      "notes": "Berlin-based heat-pump installer. Plans, funds, and installs heat pumps across Germany. Founded 2013. thermondo.de",
+      "orgKind": "scaleup",
+      "website": "https://www.thermondo.de/",
+      "linkedIn": "https://www.linkedin.com/company/thermondo",
+      "locations": [
+        "Berlin"
+      ],
+      "position": {
+        "x": -1122.1093594092636,
+        "y": 1370.913708554293
+      },
+      "pinned": false,
+      "tags": [
+        "heating",
+        "heat-pump",
+        "Berlin"
+      ]
+    },
+    {
+      "id": "earth-observation",
+      "name": "Earth observation",
+      "type": "solution",
+      "notes": "Satellite imagery and analytics for seeing environmental change — climate, land, infrastructure, and adaptation.",
+      "position": {
+        "x": -1975.3784847532786,
+        "y": 1068.9456478593204
+      },
+      "tags": [
+        "climate",
+        "satellites",
+        "data"
+      ]
+    },
+    {
+      "id": "planet-labs",
+      "name": "Planet Labs",
+      "type": "organization",
+      "notes": "Planet Labs PBC. Daily satellite imagery and Earth-data analytics. Mission is to make global change visible, accessible, and actionable. planet.com",
+      "orgKind": "scaleup",
+      "website": "https://www.planet.com/",
+      "linkedIn": "https://www.linkedin.com/company/planet-labs",
+      "locations": [
+        "San Francisco",
+        "Berlin",
+        "Washington D.C.",
+        "Haarlem",
+        "Ljubljana",
+        "London",
+        "Graz"
+      ],
+      "position": {
+        "x": -2166.1222406995353,
+        "y": 1014.2311870824706
+      },
+      "tags": [
+        "earth-observation",
+        "satellites",
+        "climate"
+      ]
+    },
+    {
+      "id": "liveeo",
+      "name": "LiveEO",
+      "type": "organization",
+      "notes": "Berlin Earth-observation company. Turns satellite imagery into risk intelligence for infrastructure and supply chains — vegetation, pipelines, and deforestation. Founded 2018. live-eo.com",
+      "orgKind": "startup",
+      "website": "https://www.live-eo.com/",
+      "linkedIn": "https://www.linkedin.com/company/liveeo",
+      "locations": [
+        "Berlin"
+      ],
+      "position": {
+        "x": -2171.85913923547,
+        "y": 1097.3234544931208
+      },
+      "tags": [
+        "earth-observation",
+        "satellites",
+        "Berlin"
+      ]
+    },
+    {
+      "id": "center-for-humane-technology",
+      "name": "Center for Humane Technology",
+      "type": "organization",
+      "notes": "Nonprofit founded in 2018 by Tristan Harris, Aza Raskin, and Randima Fernando. Works on the harms of attention-economy platforms and misaligned AI, and on shifting technology toward the common good. humanetech.com",
+      "orgKind": "NGO",
+      "website": "https://www.humanetech.com/",
+      "linkedIn": "https://www.linkedin.com/company/the-center-for-humane-technology",
+      "locations": [
+        "San Francisco"
+      ],
+      "position": {
+        "x": 625.3397121802394,
+        "y": 1907.2125285255192
+      },
+      "pinned": false,
+      "tags": [
+        "platforms",
+        "attention",
+        "AI"
+      ]
+    },
+    {
+      "id": "geopolitical-pressure",
+      "name": "Geopolitical pressure",
+      "type": "problem",
+      "notes": "Strategic dependence and security competition — pressure on European autonomy in technology, defense, and space.",
+      "position": {
+        "x": -476.2918938251738,
+        "y": 1573.2278063417987
+      },
+      "tags": [
+        "geopolitics",
+        "security"
+      ]
+    },
+    {
+      "id": "digital-sovereignty",
+      "name": "Digital sovereignty",
+      "type": "solution",
+      "notes": "Independent control over digital infrastructure, data, and technology — reducing dependence on non-European providers.",
+      "position": {
+        "x": 44.4062279703445,
+        "y": 1784.7682461280167
+      },
+      "tags": [
+        "sovereignty",
+        "digital"
+      ]
+    },
+    {
+      "id": "defense",
+      "name": "Defense",
+      "type": "solution",
+      "notes": "Sovereign defense capability for a more contested security environment.",
+      "position": {
+        "x": -274.09375961558453,
+        "y": 1596.7857131050616
+      },
+      "pinned": false,
+      "tags": [
+        "defense",
+        "security"
+      ]
+    },
+    {
+      "id": "space-travel",
+      "name": "Space travel",
+      "type": "solution",
+      "notes": "Independent access to space — launch, satellites, and strategic infrastructure.",
+      "position": {
+        "x": -343.34262003318975,
+        "y": 1692.1830291640142
+      },
+      "tags": [
+        "space",
+        "sovereignty"
+      ]
+    },
+    {
+      "id": "aisi-deutschland",
+      "name": "AISI Deutschland",
+      "type": "organization",
+      "notes": "AI Safety and Security Institute Deutschland. National institute, still being built, for evaluating capable AI systems and advising the federal government on AI security and digital sovereignty. Led by BMDS and BMI, with BSI (security) and BNetzA (safety) forming the first nucleus. Not a regulator. Planned seat in Berlin.",
+      "orgKind": "public institution",
+      "website": "https://www.bsi.bund.de/DE/Themen/Unternehmen-und-Organisationen/Informationen-und-Empfehlungen/AISI/aisi_node.html",
+      "locations": [
+        "Berlin"
+      ],
+      "position": {
+        "x": 203.17714860863532,
+        "y": 1812.573960136207
+      },
+      "tags": [
+        "AI",
+        "security",
+        "sovereignty"
+      ]
+    },
+    {
+      "id": "helsing",
+      "name": "Helsing",
+      "type": "organization",
+      "notes": "European defense AI company. Builds software for sensing, electronic warfare, and autonomous systems so democracies can defend themselves. Founded 2021. helsing.ai",
+      "orgKind": "scaleup",
+      "website": "https://helsing.ai/",
+      "linkedIn": "https://www.linkedin.com/company/helsing/",
+      "locations": [
+        "Munich",
+        "Berlin",
+        "London",
+        "Paris"
+      ],
+      "position": {
+        "x": -93.47423392402474,
+        "y": 1611.000830268325
+      },
+      "tags": [
+        "defense",
+        "AI"
+      ]
+    },
+    {
+      "id": "ma-societal-design-1790152924340",
+      "name": "MA Societal Design",
+      "type": "academic",
+      "notes": "",
+      "position": {
+        "x": -1825.0866414435816,
+        "y": 507.6302470647453
+      }
+    },
+    {
+      "id": "the-school-of-moral-ambition-1790152974177",
+      "name": "The School of Moral Ambition",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": 7117.764710744974,
+        "y": -7380.1782839222915
+      }
+    },
+    {
+      "id": "bauhaus-erde-1790154020138",
+      "name": "Bauhaus Erde",
+      "type": "organization",
+      "notes": "Nonprofit think-and-make tank for a regenerative built environment — bio-based materials, circular construction, and buildings and cities as carbon sinks. Also known as Bauhaus Earth. Founded 2019 by Hans Joachim Schellnhuber and Marc Weissgerber. Headquarters in Berlin, branch in Potsdam.",
+      "position": {
+        "x": -1314.3338225134103,
+        "y": 1121.1875065179336
+      },
+      "orgKind": "NGO",
+      "website": "https://www.bauhauserde.org/",
+      "linkedIn": "https://www.linkedin.com/company/bauhaus-earth",
+      "locations": [
+        "Berlin",
+        "Potsdam"
+      ],
+      "tags": [
+        "buildings",
+        "climate",
+        "regenerative"
+      ]
+    },
+    {
+      "id": "wernerundwalter",
+      "name": "wernerundwalter",
+      "type": "organization",
+      "notes": "Landscape architecture and product design studio for urban open space. Turns sealed surfaces into climate-resilient places and designs modular urban products. Founded 2025 by Niklas Werner and Richard Walter. Leipzig. wernerundwalter.de",
+      "orgKind": "studio",
+      "website": "https://wernerundwalter.de/",
+      "linkedIn": "https://www.linkedin.com/company/wernerundwalter",
+      "locations": [
+        "Leipzig"
+      ],
+      "position": {
+        "x": -1608.3481026661916,
+        "y": 651.83321189782
+      },
+      "tags": [
+        "urban",
+        "landscape",
+        "climate"
+      ]
+    },
+    {
+      "id": "capacity-eco",
+      "name": "Capacity.eco",
+      "type": "organization",
+      "notes": "Nonprofit venture studio building moonshot missions to defend nature. Combines AI, satellite intelligence, and frontline partners. First mission, The Shield, protects the Amazon. Founded 2024. Headquarters in Zurich.",
+      "orgKind": "NGO",
+      "website": "https://capacity.eco",
+      "linkedIn": "https://www.linkedin.com/company/capacity-eco",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQEAzIsoLzK01w/company-logo_200_200/company-logo_200_200/0/1727195374700/capacity_eco_logo?e=2147483647&v=beta&t=hvdNZRkNj1jg77iLCd3DZSb6ub3YqB3gNxmiF4nvrXM",
+      "locations": [
+        "Zurich",
+        "Berlin"
+      ],
+      "position": {
+        "x": -1990.5371858025858,
+        "y": 1717.7912077399733
+      },
+      "tags": [
+        "biodiversity",
+        "climate",
+        "nature"
+      ]
+    },
+    {
+      "id": "blue-impact",
+      "name": "Blue Impact",
+      "type": "organization",
+      "notes": "Evergreen impact fund backing pre-seed and seed climate and biodiversity teams. Profits are reinvested. Lawrence Leuschner pledged his TIER stake to the fund. Berlin.",
+      "orgKind": "fund",
+      "website": "https://www.blueimpact.ventures",
+      "linkedIn": "https://www.linkedin.com/company/blue-impact-ventures/",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQGoxZtMECEc2g/company-logo_200_200/company-logo_200_200/0/1688119933320/blue_impact_ventures_logo?e=2147483647&v=beta&t=8F0NXdorftJkPRpm2ec_HxAcBo-ARk3mHiSHG2xIxkI",
+      "locations": [
+        "Berlin"
+      ],
+      "position": {
+        "x": -1880.4162715778652,
+        "y": 2174.4825417994275
+      },
+      "tags": [
+        "climate",
+        "finance",
+        "biodiversity"
+      ]
+    },
+    {
+      "id": "ecosia",
+      "name": "Ecosia",
+      "type": "organization",
+      "notes": "Search engine that puts ad profits into climate action — tree planting, ecosystem restoration, regenerative agriculture, and renewable energy. Steward-owned European alternative to big-tech search. Founded 2009 in Berlin.",
+      "orgKind": "social enterprise",
+      "website": "https://www.ecosia.org",
+      "linkedIn": "https://www.linkedin.com/company/ecosia",
+      "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQGy-8N30jqt0Q/company-logo_200_200/B4DZreJmCVIgAI-/0/1764663648857/ecosia_logo?e=2147483647&v=beta&t=CFAhm4bkT8_0lpDxCcLt3lPzQDhyy9WehJ1WIW5t35M",
+      "locations": [
+        "Berlin"
+      ],
+      "position": {
+        "x": 577.6413036818067,
+        "y": 1988.1270470072454
+      },
+      "tags": [
+        "climate",
+        "search",
+        "nature"
+      ]
+    },
+    {
+      "id": "recovering-nature",
+      "name": "Recovering nature",
+      "type": "solution",
+      "notes": "Restoring ecosystems — forests, soils, and biodiversity — to draw down carbon and slow climate change.",
+      "position": {
+        "x": -1261.8753024256782,
+        "y": 949.7600879322147
+      },
+      "tags": [
+        "nature",
+        "climate",
+        "mitigation"
+      ]
+    },
+    {
+      "id": "user-rights-1791293788322",
+      "name": "User Rights",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": 870.613979917704,
+        "y": 1689.8987996580195
+      }
+    },
+    {
+      "id": "rebuy-1791457407164",
+      "name": "reBuy",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1762.0622828743817,
+        "y": 1674.3584990529137
+      },
+      "pinned": false
+    },
+    {
+      "id": "sustainable-e-commerce-1791457435353",
+      "name": "sustainable e-commerce",
+      "type": "solution",
+      "notes": "",
+      "position": {
+        "x": -1565.8728167202119,
+        "y": 1336.1550414817668
+      },
+      "pinned": false
+    },
+    {
+      "id": "enpal-1791457797698",
+      "name": "Enpal",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -1363.1586250253213,
+        "y": 1776.5728015999823
+      },
+      "pinned": false
+    },
+    {
+      "id": "gropyus-1791458493193",
+      "name": "Gropyus",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": 4995.25319978054,
+        "y": -3838.180010024914
+      }
+    },
+    {
+      "id": "klim-1791458498416",
+      "name": "Klim",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": 3785.7239397203666,
+        "y": -4354.153888020173
+      }
+    },
+    {
+      "id": "sunpeak-capital-1791458535984",
+      "name": "Sunpeak Capital",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": 3970.445357154493,
+        "y": -3185.0603127959535
+      }
+    },
+    {
+      "id": "the-agentic-state-1791459034400",
+      "name": "The Agentic State",
+      "type": "organization",
+      "notes": "",
+      "position": {
+        "x": -2077.1882363313425,
+        "y": -97.72498300753803
+      },
+      "pinned": false
     }
   ],
   "edges": [
-    {
-      "id": "e-climate-energy",
-      "source": "climate-change",
-      "target": "energy-transformation",
-      "label": "drives"
-    },
-    {
-      "id": "e-climate-buildings",
-      "source": "climate-change",
-      "target": "buildings",
-      "label": "requires"
-    },
     {
       "id": "e-climate-urban",
       "source": "climate-change",
@@ -443,100 +1620,10 @@
       "label": "serves"
     },
     {
-      "id": "e-reonic-energy",
-      "source": "reonic",
-      "target": "energy-transformation",
-      "label": "enables"
-    },
-    {
-      "id": "e-voize-health",
-      "source": "voize",
-      "target": "health",
-      "label": "serves"
-    },
-    {
-      "id": "e-praxipal-health",
-      "source": "praxipal",
-      "target": "health",
-      "label": "serves"
-    },
-    {
-      "id": "e-finance-climate",
-      "source": "finance",
-      "target": "climate-change",
-      "label": "funds"
-    },
-    {
-      "id": "e-aleksander-dml",
-      "source": "aleksander-nowak",
-      "target": "dark-matter-labs",
-      "label": "connected to"
-    },
-    {
-      "id": "e-aleksander-nancy",
-      "source": "aleksander-nowak",
-      "target": "nancy-birkholzer",
-      "label": "connected to"
-    },
-    {
-      "id": "e-nancy-dream",
-      "source": "nancy-birkholzer",
-      "target": "dream-mobility",
-      "label": "related to"
-    },
-    {
-      "id": "e-dream-open-mobility",
-      "source": "dream-mobility",
-      "target": "open-mobility",
-      "label": "works on"
-    },
-    {
-      "id": "e-open-mobility-climate",
-      "source": "open-mobility",
-      "target": "climate-change",
-      "label": "addresses"
-    },
-    {
-      "id": "e-climate-resilient-cities",
-      "source": "climate-change",
-      "target": "resilient-cities",
-      "label": "drives"
-    },
-    {
       "id": "e-urban-resilient-cities",
       "source": "urban-development",
       "target": "resilient-cities",
       "label": "includes"
-    },
-    {
-      "id": "e-nancy-open-mobility",
-      "source": "nancy-birkholzer",
-      "target": "open-mobility",
-      "label": "interested in"
-    },
-    {
-      "id": "e-simon-dml",
-      "source": "simon-hoeher",
-      "target": "dark-matter-labs",
-      "label": "connected to"
-    },
-    {
-      "id": "e-rene-nature-wealth",
-      "source": "rene-schaefer",
-      "target": "nature-wealth",
-      "label": "co-founded"
-    },
-    {
-      "id": "e-nature-wealth-finance",
-      "source": "nature-wealth",
-      "target": "finance",
-      "label": "works on"
-    },
-    {
-      "id": "e-nature-wealth-climate",
-      "source": "nature-wealth",
-      "target": "climate-change",
-      "label": "addresses"
     },
     {
       "id": "e-osl-urban",
@@ -549,7 +1636,587 @@
       "source": "open-systems-lab",
       "target": "buildings",
       "label": "enables"
+    },
+    {
+      "id": "e-govtech-bureaucracy",
+      "source": "govtech",
+      "target": "bureaucracy",
+      "label": "addresses"
+    },
+    {
+      "id": "e-health-urban-health",
+      "source": "health",
+      "target": "urban-health",
+      "label": "includes"
+    },
+    {
+      "id": "e-urban-health-urban-dev",
+      "source": "urban-health",
+      "target": "urban-development",
+      "label": "shapes"
+    },
+    {
+      "id": "e-landbanking-biodiversity-asset",
+      "source": "landbanking-group",
+      "target": "biodiversity-as-asset",
+      "label": "develops"
+    },
+    {
+      "id": "e-biodiversity-asset-nature-wealth",
+      "source": "biodiversity-as-asset",
+      "target": "nature-wealth",
+      "label": "aligns with"
+    },
+    {
+      "id": "e-biodiversity-asset-loss",
+      "source": "biodiversity-as-asset",
+      "target": "biodiversity-loss",
+      "label": "addresses"
+    },
+    {
+      "id": "e-biodiversity-loss-climate",
+      "source": "biodiversity-loss",
+      "target": "climate-change",
+      "label": "linked to"
+    },
+    {
+      "id": "e-climate-mitigation",
+      "source": "climate-change",
+      "target": "mitigation",
+      "label": "requires"
+    },
+    {
+      "id": "e-climate-adaptation",
+      "source": "climate-change",
+      "target": "adaptation",
+      "label": "requires"
+    },
+    {
+      "id": "e-mitigation-energy",
+      "source": "mitigation",
+      "target": "energy-transformation",
+      "label": "includes"
+    },
+    {
+      "id": "e-mitigation-buildings",
+      "source": "mitigation",
+      "target": "buildings",
+      "label": "includes"
+    },
+    {
+      "id": "e-adaptation-resilient-cities",
+      "source": "adaptation",
+      "target": "resilient-cities",
+      "label": "includes"
+    },
+    {
+      "id": "e-open-mobility-mitigation",
+      "source": "open-mobility",
+      "target": "mitigation",
+      "label": "addresses"
+    },
+    {
+      "id": "e-open-mobility-urban-development-1789405510419",
+      "source": "open-mobility",
+      "target": "urban-development"
+    },
+    {
+      "id": "e-solar-1789461033231-electricity-1789461060575",
+      "source": "solar-1789461033231",
+      "target": "electricity"
+    },
+    {
+      "id": "e-reonic-heating-1789461202336",
+      "source": "reonic",
+      "target": "heating"
+    },
+    {
+      "id": "e-reonic-solar-1789461033231-1789461210566",
+      "source": "reonic",
+      "target": "solar-1789461033231"
+    },
+    {
+      "id": "e-autarc-solar-1789461033231-1789461216314",
+      "source": "autarc",
+      "target": "solar-1789461033231"
+    },
+    {
+      "id": "e-nomos-1789461225070-electricity-1789461233521",
+      "source": "nomos-1789461225070",
+      "target": "electricity"
+    },
+    {
+      "id": "e-1komma5-1789461305372-electricity-1789461317604",
+      "source": "1komma5-1789461305372",
+      "target": "electricity"
+    },
+    {
+      "id": "e-hems-1789461365680-solar-1789461033231-1789461397380",
+      "source": "hems-1789461365680",
+      "target": "solar-1789461033231"
+    },
+    {
+      "id": "e-hems-1789461365680-heating-1789461419831",
+      "source": "hems-1789461365680",
+      "target": "heating"
+    },
+    {
+      "id": "e-cloover-1789461470127-solar-1789461033231-1789461506610",
+      "source": "cloover-1789461470127",
+      "target": "solar-1789461033231"
+    },
+    {
+      "id": "e-govtech-deutschland-1789461533761-govtech-1789461558085",
+      "source": "govtech-deutschland-1789461533761",
+      "target": "govtech"
+    },
+    {
+      "id": "e-voize-digital-health",
+      "source": "voize",
+      "target": "digital-health",
+      "label": "serves"
+    },
+    {
+      "id": "e-praxipal-digital-health",
+      "source": "praxipal",
+      "target": "digital-health",
+      "label": "serves"
+    },
+    {
+      "id": "e-doctolib-digital-health",
+      "source": "doctolib-1789460550490",
+      "target": "digital-health",
+      "label": "serves"
+    },
+    {
+      "id": "e-digital-health-health",
+      "source": "digital-health",
+      "target": "health",
+      "label": "addresses"
+    },
+    {
+      "id": "e-nature-wealth-nature-finance",
+      "source": "nature-wealth",
+      "target": "nature-finance",
+      "label": "works on"
+    },
+    {
+      "id": "e-nature-finance-finance",
+      "source": "nature-finance",
+      "target": "finance",
+      "label": "addresses"
+    },
+    {
+      "id": "e-cloover-climate-finance",
+      "source": "cloover-1789461470127",
+      "target": "climate-finance",
+      "label": "serves"
+    },
+    {
+      "id": "e-wam-climate-finance",
+      "source": "wermuth-asset-management",
+      "target": "climate-finance",
+      "label": "works on"
+    },
+    {
+      "id": "e-climate-finance-finance",
+      "source": "climate-finance",
+      "target": "finance",
+      "label": "addresses"
+    },
+    {
+      "id": "e-switchcoal-coal-to-clean",
+      "source": "switchcoal",
+      "target": "coal-to-clean",
+      "label": "develops"
+    },
+    {
+      "id": "e-coal-to-clean-energy",
+      "source": "coal-to-clean",
+      "target": "energy-transformation",
+      "label": "addresses"
+    },
+    {
+      "id": "e-tactical-tech-climate-info",
+      "source": "tactical-tech",
+      "target": "climate-information",
+      "label": "works on"
+    },
+    {
+      "id": "e-climate-info-climate",
+      "source": "climate-information",
+      "target": "climate-change",
+      "label": "addresses"
+    },
+    {
+      "id": "e-bidirectional-charging-1789462585251-hems-1789461365680-1789462602246",
+      "source": "bidirectional-charging-1789462585251",
+      "target": "hems-1789461365680"
+    },
+    {
+      "id": "e-open-mobility-evs-1789462505919-1789462627322",
+      "source": "open-mobility",
+      "target": "evs-1789462505919"
+    },
+    {
+      "id": "e-evs-1789462505919-bidirectional-charging-1789462585251-1789462631631",
+      "source": "evs-1789462505919",
+      "target": "bidirectional-charging-1789462585251",
+      "label": "allow"
+    },
+    {
+      "id": "e-miles-1789462686243-car-sharing-1789462657756-1789462697917",
+      "source": "miles-1789462686243",
+      "target": "car-sharing-1789462657756"
+    },
+    {
+      "id": "e-open-mobility-sharing-concepts-1789462739435-1789462760671",
+      "source": "open-mobility",
+      "target": "sharing-concepts-1789462739435"
+    },
+    {
+      "id": "e-sharing-concepts-1789462739435-car-sharing-1789462657756-1789462765422",
+      "source": "sharing-concepts-1789462739435",
+      "target": "car-sharing-1789462657756"
+    },
+    {
+      "id": "e-sharing-concepts-1789462739435-bike-sharing-1789462777461-1789462789942",
+      "source": "sharing-concepts-1789462739435",
+      "target": "bike-sharing-1789462777461"
+    },
+    {
+      "id": "e-sharing-concepts-1789462739435-e-scooters-1789462803845-1789462803845",
+      "source": "sharing-concepts-1789462739435",
+      "target": "e-scooters-1789462803845"
+    },
+    {
+      "id": "e-e-scooters-1789462803845-bolt-1789462812740-1789462812740",
+      "source": "e-scooters-1789462803845",
+      "target": "bolt-1789462812740"
+    },
+    {
+      "id": "e-bolt-1789462812740-bike-sharing-1789462777461-1789462816946",
+      "source": "bolt-1789462812740",
+      "target": "bike-sharing-1789462777461"
+    },
+    {
+      "id": "e-bolt-1789462812740-car-sharing-1789462657756-1789462819066",
+      "source": "bolt-1789462812740",
+      "target": "car-sharing-1789462657756"
+    },
+    {
+      "id": "e-open-mobility-public-transport-1789462833694-1789462833694",
+      "source": "open-mobility",
+      "target": "public-transport-1789462833694"
+    },
+    {
+      "id": "e-open-mobility-night-trains-1789463059254-1789463059254",
+      "source": "open-mobility",
+      "target": "night-trains-1789463059254"
+    },
+    {
+      "id": "e-nox-mobility-1789463047972-night-trains-1789463059254-1789463083874",
+      "source": "nox-mobility-1789463047972",
+      "target": "night-trains-1789463059254"
+    },
+    {
+      "id": "e-dream-mobility-night-trains-1789463059254-1789463089547",
+      "source": "dream-mobility",
+      "target": "night-trains-1789463059254"
+    },
+    {
+      "id": "e-proton-1789463294860-privacy-1789464800934-1789464800934",
+      "source": "proton-1789463294860",
+      "target": "privacy-1789464800934"
+    },
+    {
+      "id": "e-privacy-1789464800934-surveillance-capitalism-1789464815207-1789464815207",
+      "source": "privacy-1789464800934",
+      "target": "surveillance-capitalism-1789464815207"
+    },
+    {
+      "id": "e-mitigation-sustainable-cities-1789465064288-1789465064288",
+      "source": "mitigation",
+      "target": "sustainable-cities-1789465064288"
+    },
+    {
+      "id": "e-sustainable-cities-1789465064288-berlin-21-1789465072299-1789465072299",
+      "source": "sustainable-cities-1789465064288",
+      "target": "berlin-21-1789465072299"
+    },
+    {
+      "id": "e-solar-1789461033231-vrey-1789465226648-1789465226648",
+      "source": "solar-1789461033231",
+      "target": "vrey-1789465226648"
+    },
+    {
+      "id": "e-buildings-energy-efficiency-renovation-1789465277057-1789465277057",
+      "source": "buildings",
+      "target": "energy-efficiency-renovation-1789465277057"
+    },
+    {
+      "id": "e-energy-efficiency-renovation-1789465277057-varm-1789465298781-1789465298781",
+      "source": "energy-efficiency-renovation-1789465277057",
+      "target": "varm-1789465298781"
+    },
+    {
+      "id": "e-irights-govtech",
+      "source": "irights-lab",
+      "target": "govtech",
+      "label": "works on"
+    },
+    {
+      "id": "e-irights-privacy",
+      "source": "irights-lab",
+      "target": "privacy-1789464800934",
+      "label": "related"
+    },
+    {
+      "id": "e-citylab-govtech",
+      "source": "citylab-berlin",
+      "target": "govtech",
+      "label": "works on"
+    },
+    {
+      "id": "e-citylab-urban",
+      "source": "citylab-berlin",
+      "target": "urban-development",
+      "label": "works on"
+    },
+    {
+      "id": "e-citylab-sustainable-cities",
+      "source": "citylab-berlin",
+      "target": "sustainable-cities-1789465064288",
+      "label": "works on"
+    },
+    {
+      "id": "e-citylab-bureaucracy",
+      "source": "citylab-berlin",
+      "target": "bureaucracy",
+      "label": "addresses"
+    },
+    {
+      "id": "e-p4t-govtech",
+      "source": "politics-for-tomorrow",
+      "target": "govtech",
+      "label": "works on"
+    },
+    {
+      "id": "e-p4t-bureaucracy",
+      "source": "politics-for-tomorrow",
+      "target": "bureaucracy",
+      "label": "addresses"
+    },
+    {
+      "id": "e-citylab-p4t",
+      "source": "citylab-berlin",
+      "target": "politics-for-tomorrow",
+      "label": "collaborated"
+    },
+    {
+      "id": "e-citylab-irights",
+      "source": "citylab-berlin",
+      "target": "irights-lab",
+      "label": "collaborated"
+    },
+    {
+      "id": "e-p4t-irights",
+      "source": "politics-for-tomorrow",
+      "target": "irights-lab",
+      "label": "ecosystem"
+    },
+    {
+      "id": "e-https-www-ecoworks-tech-1789635699159-energy-efficiency-renovation-1789465277057-1789635720612",
+      "source": "https-www-ecoworks-tech-1789635699159",
+      "target": "energy-efficiency-renovation-1789465277057"
+    },
+    {
+      "id": "e-special-projects-design-agencies",
+      "source": "special-projects",
+      "target": "design-agencies"
+    },
+    {
+      "id": "e-pilotfish-design-agencies",
+      "source": "pilotfish",
+      "target": "design-agencies"
+    },
+    {
+      "id": "e-anti-bigtech-1790090072110-regulation-1790090153901-1790090153901",
+      "source": "anti-bigtech-1790090072110",
+      "target": "regulation-1790090153901"
+    },
+    {
+      "id": "e-gnome-1789635266682-linux-1790090268528-1790090268528",
+      "source": "gnome-1789635266682",
+      "target": "linux-1790090268528"
+    },
+    {
+      "id": "e-linux-1790090268528-open-source-1790090297399-1790090297399",
+      "source": "linux-1790090268528",
+      "target": "open-source-1790090297399"
+    },
+    {
+      "id": "e-open-source-1790090297399-free-software-1790090318058-1790090318058",
+      "source": "open-source-1790090297399",
+      "target": "free-software-1790090318058"
+    },
+    {
+      "id": "e-heating-thermondo-1790090370396-1790090370396",
+      "source": "heating",
+      "target": "thermondo-1790090370396"
+    },
+    {
+      "id": "e-planet-labs-earth-observation",
+      "source": "planet-labs",
+      "target": "earth-observation"
+    },
+    {
+      "id": "e-liveeo-earth-observation",
+      "source": "liveeo",
+      "target": "earth-observation"
+    },
+    {
+      "id": "e-earth-observation-climate-change",
+      "source": "earth-observation",
+      "target": "climate-change",
+      "label": "addresses"
+    },
+    {
+      "id": "e-earth-observation-adaptation",
+      "source": "earth-observation",
+      "target": "adaptation",
+      "label": "supports"
+    },
+    {
+      "id": "e-cht-monopolistic-platforms",
+      "source": "center-for-humane-technology",
+      "target": "anti-bigtech-1790090072110",
+      "label": "addresses"
+    },
+    {
+      "id": "e-digital-sovereignty-geopolitical-pressure",
+      "source": "digital-sovereignty",
+      "target": "geopolitical-pressure",
+      "label": "addresses"
+    },
+    {
+      "id": "e-defense-geopolitical-pressure",
+      "source": "defense",
+      "target": "geopolitical-pressure",
+      "label": "addresses"
+    },
+    {
+      "id": "e-space-travel-geopolitical-pressure",
+      "source": "space-travel",
+      "target": "geopolitical-pressure",
+      "label": "addresses"
+    },
+    {
+      "id": "e-aisi-digital-sovereignty",
+      "source": "aisi-deutschland",
+      "target": "digital-sovereignty",
+      "label": "works on"
+    },
+    {
+      "id": "e-helsing-defense",
+      "source": "helsing",
+      "target": "defense",
+      "label": "works on"
+    },
+    {
+      "id": "e-design-agencies-a-color-bright-1790152687207",
+      "source": "design-agencies",
+      "target": "a-color-bright"
+    },
+    {
+      "id": "e-open-source-1790090297399-digital-sovereignty-1790152728692",
+      "source": "open-source-1790090297399",
+      "target": "digital-sovereignty"
+    },
+    {
+      "id": "e-energy-transformation-geopolitical-pressure-1790152818147",
+      "source": "energy-transformation",
+      "target": "geopolitical-pressure"
+    },
+    {
+      "id": "e-ma-societal-design-1790152924340-dark-matter-labs-1790152949903",
+      "source": "ma-societal-design-1790152924340",
+      "target": "dark-matter-labs",
+      "label": "originates from"
+    },
+    {
+      "id": "e-bauhaus-erde-1790154020138-buildings-1790154094782",
+      "source": "bauhaus-erde-1790154020138",
+      "target": "buildings",
+      "label": "works on"
+    },
+    {
+      "id": "e-wernerundwalter-urban-development",
+      "source": "wernerundwalter",
+      "target": "urban-development",
+      "label": "works on"
+    },
+    {
+      "id": "e-capacity-biodiversity-loss",
+      "source": "capacity-eco",
+      "target": "biodiversity-loss",
+      "label": "works on"
+    },
+    {
+      "id": "e-blue-impact-climate-finance",
+      "source": "blue-impact",
+      "target": "climate-finance",
+      "label": "invests in"
+    },
+    {
+      "id": "e-blue-impact-nature-finance",
+      "source": "blue-impact",
+      "target": "nature-finance",
+      "label": "invests in"
+    },
+    {
+      "id": "e-ecosia-anti-bigtech",
+      "source": "ecosia",
+      "target": "anti-bigtech-1790090072110",
+      "label": "alternative to"
+    },
+    {
+      "id": "e-mitigation-recovering-nature",
+      "source": "mitigation",
+      "target": "recovering-nature",
+      "label": "includes"
+    },
+    {
+      "id": "e-anti-bigtech-1790090072110-digital-sovereignty-1791293464475",
+      "source": "anti-bigtech-1790090072110",
+      "target": "digital-sovereignty"
+    },
+    {
+      "id": "e-user-rights-1791293788322-regulation-1790090153901-1791293797574",
+      "source": "user-rights-1791293788322",
+      "target": "regulation-1790090153901"
+    },
+    {
+      "id": "e-rebuy-1791457407164-sustainable-e-commerce-1791457435353-1791457435353",
+      "source": "rebuy-1791457407164",
+      "target": "sustainable-e-commerce-1791457435353"
+    },
+    {
+      "id": "e-sustainable-e-commerce-1791457435353-mitigation-1791457455239",
+      "source": "sustainable-e-commerce-1791457435353",
+      "target": "mitigation"
+    },
+    {
+      "id": "e-solar-1789461033231-enpal-1791457797698-1791457797698",
+      "source": "solar-1789461033231",
+      "target": "enpal-1791457797698"
+    },
+    {
+      "id": "e-the-agentic-state-1791459034400-global-government-technology-center-1789635851412-1791459071092",
+      "source": "the-agentic-state-1791459034400",
+      "target": "global-government-technology-center-1789635851412"
     }
   ],
-  "updatedAt": "2026-09-14T10:25:54.077Z"
+  "updatedAt": "2026-10-08T12:11:20.846Z",
+  "revision": 267
 }
