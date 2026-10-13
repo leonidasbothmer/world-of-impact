@@ -175,7 +175,6 @@ function AvatarTileNode({
 }) {
   const style = NODE_TYPE_CONFIG[node.type as NodeType];
   const initials = initialsFromName(node.name);
-  const contacted = node.tags?.includes("contacted");
   const { dropHover, dropActive } = useDropHover(id);
 
   return (
@@ -231,11 +230,6 @@ function AvatarTileNode({
       >
         {node.name}
       </p>
-      {contacted && (
-        <span className="rounded-full bg-violet-100 px-1 py-0 text-[8px] font-medium uppercase tracking-wide text-violet-700">
-          contacted
-        </span>
-      )}
     </div>
   );
 }
