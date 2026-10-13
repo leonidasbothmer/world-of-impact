@@ -49,6 +49,7 @@ export function AddNodeForm({
 
   const matches = useMemo(() => matchNodes(nodes, name), [nodes, name]);
   const showSuggestions = suggestionsOpen && matches.length > 0;
+  const showLinkedIn = type === "organization" || type === "person";
   suggestionsOpenRef.current = showSuggestions;
 
   useEffect(() => {
@@ -209,7 +210,16 @@ export function AddNodeForm({
           </div>
           <div className="space-y-1.5">
             <Label>Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as NodeType)}>
+            <Select
+              value={type}
+              onValueChange={(v) => {
+                const next = v as NodeType;
+                setType(next);
+                if (next !== "organization" && next !== "person") {
+                  linkedInPreview.reset();
+                }
+              }}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -222,14 +232,16 @@ export function AddNodeForm({
               </SelectContent>
             </Select>
           </div>
-          <LinkedInField
-            id="new-linkedin"
-            value={linkedInPreview.linkedIn}
-            onChange={linkedInPreview.onChange}
-            error={linkedInPreview.error}
-            disabled={linkedInPreview.pending}
-            className="space-y-1.5"
-          />
+          {showLinkedIn ? (
+            <LinkedInField
+              id="new-linkedin"
+              value={linkedInPreview.linkedIn}
+              onChange={linkedInPreview.onChange}
+              error={linkedInPreview.error}
+              disabled={linkedInPreview.pending}
+              className="space-y-1.5"
+            />
+          ) : null}
           <Button
             type="submit"
             className="w-full"

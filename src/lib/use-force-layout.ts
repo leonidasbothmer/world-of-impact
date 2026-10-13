@@ -11,6 +11,7 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 import type { Node } from "@xyflow/react";
+import { PERSON_NODE_SIZE } from "@/lib/node-styles";
 import type { MindMapData, NodeType } from "@/types/mindmap";
 
 export type ForceSimNode = SimulationNodeDatum & {
@@ -177,7 +178,7 @@ function forceClusters(model: ClusterModel) {
       let count = 0;
       for (const id of memberIds) {
         const node = byId.get(id);
-        if (!node || node.x == null || node.y == null) continue;
+        if (!node || node.type === "person" || node.x == null || node.y == null) continue;
         sx += node.x;
         sy += node.y;
         count += 1;
@@ -232,7 +233,7 @@ function forceClusters(model: ClusterModel) {
 
     const drag = new Map(clusterIds.map((id) => [id, { x: 0, y: 0 }]));
     for (const node of nodes) {
-      if (node.x == null || node.y == null) continue;
+      if (node.type === "person" || node.x == null || node.y == null) continue;
       const ties = model.ties.get(node.id) ?? [];
       if (ties.length < 2) continue;
       for (const tie of ties) {
@@ -247,6 +248,7 @@ function forceClusters(model: ClusterModel) {
     }
 
     for (const node of nodes) {
+      if (node.type === "person") continue;
       if (node.fx != null || node.fy != null || node.x == null || node.y == null) continue;
       let vx = node.vx ?? 0;
       let vy = node.vy ?? 0;
@@ -297,10 +299,156 @@ function forceClusters(model: ClusterModel) {
 
 /** Avatar tiles are narrower than the text boxes, so they need less personal space. */
 function collideRadius(node: ForceSimNode): number {
-  return node.type === "person" || node.type === "organization" ? 54 : 68;
+  return node.type === "organization" ? 54 : 68;
 }
 
-/** Person↔person ties are visual only — they must not pull nodes in the layout. */
+const MOON_GAP = 6;
+
+type HostAnchor = { x: number; y: number; rx: number; ry: number };
+
+function hostAnchor(
+  node: ForceSimNode,
+  measured: { width: number; height: number } | undefined,
+): HostAnchor | null {
+  if (node.x == null || node.y == null) return null;
+  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return null;
+  const width = measured?.width ?? (node.type === "organization" ? 48 : 96);
+  const height = measured?.height ?? (node.type === "organization" ? 56 : 36);
+  return {
+    x: node.x + width / 2,
+    y: node.y + height / 2,
+    rx: width / 2,
+    ry: height / 2,
+  };
+}
+
+function ringRadii(anchor: HostAnchor, count: number): { rx: number; ry: number } {
+  const pad = PERSON_NODE_SIZE / 2 + MOON_GAP;
+  let rx = anchor.rx + pad;
+  let ry = anchor.ry + pad;
+  const packed = (count * (PERSON_NODE_SIZE + 4)) / (2 * Math.PI);
+  const base = Math.max(rx, ry, 1);
+  if (packed > base) {
+    const scale = packed / base;
+    rx *= scale;
+    ry *= scale;
+  }
+  return { rx, ry };
+}
+
+/**
+ * People are left out of the simulation. One host puts them on a tight ring.
+ * Two or more hosts put them on the midpoint, so they never pull those nodes
+ * together. Several people on the same hosts spread sideways. Pinned people
+ * stay where they were dragged.
+ */
+function applyPersonMoons(
+  nodes: Map<string, ForceSimNode>,
+  edges: { source: string; target: string }[],
+  measured: Map<string, { width: number; height: number }>,
+  visibleIds: Set<string>,
+) {
+  const hosts = new Map<string, HostAnchor>();
+  const people: ForceSimNode[] = [];
+  for (const node of nodes.values()) {
+    if (node.type === "person") {
+      people.push(node);
+      continue;
+    }
+    if (visibleIds.size > 0 && !visibleIds.has(node.id)) continue;
+    const anchor = hostAnchor(node, measured.get(node.id));
+    if (anchor) hosts.set(node.id, anchor);
+  }
+  if (people.length === 0 || hosts.size === 0) return;
+
+  const anchorsOf = new Map<string, string[]>();
+  const addAnchor = (personId: string, hostId: string) => {
+    if (!hosts.has(hostId)) return;
+    const list = anchorsOf.get(personId);
+    if (list) list.push(hostId);
+    else anchorsOf.set(personId, [hostId]);
+  };
+  for (const edge of edges) {
+    const source = nodes.get(edge.source);
+    const target = nodes.get(edge.target);
+    if (!source || !target) continue;
+    if (source.type === "person" && target.type !== "person") addAnchor(source.id, target.id);
+    else if (target.type === "person" && source.type !== "person") {
+      addAnchor(target.id, source.id);
+    }
+  }
+
+  const orbiting = new Map<string, ForceSimNode[]>();
+  const bridging = new Map<string, { hostIds: string[]; moons: ForceSimNode[] }>();
+  for (const person of people) {
+    if (person.fx != null || person.fy != null) {
+      if (person.fx != null) person.x = person.fx;
+      if (person.fy != null) person.y = person.fy;
+      person.vx = 0;
+      person.vy = 0;
+      continue;
+    }
+    const anchors = [...new Set(anchorsOf.get(person.id) ?? [])].sort();
+    if (anchors.length === 0) continue;
+    if (anchors.length === 1) {
+      const list = orbiting.get(anchors[0]) ?? [];
+      list.push(person);
+      orbiting.set(anchors[0], list);
+      continue;
+    }
+    const key = anchors.join("|");
+    const group = bridging.get(key);
+    if (group) group.moons.push(person);
+    else bridging.set(key, { hostIds: anchors, moons: [person] });
+  }
+
+  const half = PERSON_NODE_SIZE / 2;
+  for (const [hostId, moons] of orbiting) {
+    const host = hosts.get(hostId);
+    if (!host) continue;
+    moons.sort((a, b) => a.id.localeCompare(b.id));
+    const { rx, ry } = ringRadii(host, moons.length);
+    const step = (2 * Math.PI) / moons.length;
+    moons.forEach((moon, index) => {
+      const angle = -Math.PI / 2 + index * step;
+      moon.x = host.x + rx * Math.cos(angle) - half;
+      moon.y = host.y + ry * Math.sin(angle) - half;
+      moon.vx = 0;
+      moon.vy = 0;
+    });
+  }
+
+  for (const group of bridging.values()) {
+    const points = group.hostIds
+      .map((id) => hosts.get(id))
+      .filter((point): point is HostAnchor => point != null);
+    if (points.length < 2) continue;
+    let cx = 0;
+    let cy = 0;
+    for (const point of points) {
+      cx += point.x;
+      cy += point.y;
+    }
+    cx /= points.length;
+    cy /= points.length;
+    const dx = points[1].x - points[0].x;
+    const dy = points[1].y - points[0].y;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len;
+    const py = dx / len;
+    const moons = [...group.moons].sort((a, b) => a.id.localeCompare(b.id));
+    const gap = PERSON_NODE_SIZE + MOON_GAP;
+    moons.forEach((moon, index) => {
+      const offset = (index - (moons.length - 1) / 2) * gap;
+      moon.x = cx + px * offset - half;
+      moon.y = cy + py * offset - half;
+      moon.vx = 0;
+      moon.vy = 0;
+    });
+  }
+}
+
+/** Person↔person ties are drawn dashed and do not pull nodes in the layout. */
 export function isPersonPersonEdge(
   edge: { source: string; target: string },
   nodesById: Map<string, { type: string }> | Record<string, { type: string }>,
@@ -317,6 +465,8 @@ export function isPersonPersonEdge(
  * Unpinned nodes settle by links; pinned nodes stay fixed (fx/fy).
  * Each problem keeps a cluster around a moving center. Shared links let
  * related problems drift together; unrelated clusters stay apart.
+ * People are moons: they are omitted from the forces and placed around the
+ * nodes they touch. A person tied to two or more nodes sits between them.
  * New nodes from JSON/API join on the next topology restart.
  */
 export function useForceLayout({
@@ -332,6 +482,8 @@ export function useForceLayout({
 }) {
   const simRef = useRef<Simulation<ForceSimNode, ForceSimLink> | null>(null);
   const nodesByIdRef = useRef<Map<string, ForceSimNode>>(new Map());
+  const edgesRef = useRef(data.edges);
+  const measuredRef = useRef(new Map<string, { width: number; height: number }>());
   const topoRef = useRef<string>("");
   const draggingRef = useRef<Set<string>>(new Set());
   const pausedRef = useRef(false);
@@ -341,6 +493,7 @@ export function useForceLayout({
   onSettledRef.current = onSettled;
 
   useEffect(() => {
+    edgesRef.current = data.edges;
     if (!enabled) return;
 
     const key = topologyKey(data);
@@ -375,12 +528,14 @@ export function useForceLayout({
 
     nodesByIdRef.current = nextMap;
     const simNodes = Array.from(nextMap.values());
-    const typeById = new Map(
-      data.nodes.map((n) => [n.id, { type: n.type }] as const),
-    );
+    const layoutNodes = simNodes.filter((node) => node.type !== "person");
     const simLinks: ForceSimLink[] = data.edges
       .filter((e) => nextMap.has(e.source) && nextMap.has(e.target))
-      .filter((e) => !isPersonPersonEdge(e, typeById))
+      .filter((e) => {
+        const source = nextMap.get(e.source);
+        const target = nextMap.get(e.target);
+        return source?.type !== "person" && target?.type !== "person";
+      })
       .map((e) => ({
         id: e.id,
         source: e.source,
@@ -392,13 +547,13 @@ export function useForceLayout({
       simRef.current?.stop();
 
       const clusterModel = buildClusterModel(
-        simNodes,
+        layoutNodes,
         simLinks.map((link) => ({
           source: String(link.source),
           target: String(link.target),
         })),
       );
-      const simulation = forceSimulation<ForceSimNode>(simNodes)
+      const simulation = forceSimulation<ForceSimNode>(layoutNodes)
         .force(
           "link",
           forceLink<ForceSimNode, ForceSimLink>(simLinks)
@@ -421,21 +576,37 @@ export function useForceLayout({
 
       simulation.on("tick", () => {
         if (pausedRef.current) return;
-        setNodes((current) =>
-          current.map((flowNode) => {
-            const simNode = nextMap.get(flowNode.id);
+        setNodes((current) => {
+          for (const flowNode of current) {
+            const width = flowNode.measured?.width;
+            const height = flowNode.measured?.height;
+            if (width && height) {
+              measuredRef.current.set(flowNode.id, { width, height });
+            }
+          }
+          applyPersonMoons(
+            nodesByIdRef.current,
+            edgesRef.current,
+            measuredRef.current,
+            new Set(current.map((flowNode) => flowNode.id)),
+          );
+          return current.map((flowNode) => {
+            const simNode = nodesByIdRef.current.get(flowNode.id);
             if (!simNode || simNode.x == null || simNode.y == null) return flowNode;
+            if (flowNode.position.x === simNode.x && flowNode.position.y === simNode.y) {
+              return flowNode;
+            }
             return {
               ...flowNode,
               position: { x: simNode.x, y: simNode.y },
             };
-          }),
-        );
+          });
+        });
       });
 
       simulation.on("end", () => {
         const positions: Record<string, { x: number; y: number }> = {};
-        for (const n of nextMap.values()) {
+        for (const n of nodesByIdRef.current.values()) {
           if (n.x == null || n.y == null) continue;
           positions[n.id] = { x: n.x, y: n.y };
         }
@@ -445,7 +616,7 @@ export function useForceLayout({
       simRef.current = simulation;
     } else {
       const simulation = simRef.current;
-      simulation.nodes(simNodes);
+      simulation.nodes(layoutNodes);
       const linkForce = simulation.force("link") as ReturnType<
         typeof forceLink<ForceSimNode, ForceSimLink>
       > | null;

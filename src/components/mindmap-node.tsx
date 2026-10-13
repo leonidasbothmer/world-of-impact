@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
 import { Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
+import { NODE_TYPE_CONFIG, PERSON_NODE_SIZE } from "@/lib/node-styles";
 import type { NodeHighlight } from "@/lib/selection-highlight";
 import type { MindMapNode, NodeType } from "@/types/mindmap";
 
@@ -280,6 +280,78 @@ function useHuggedLabelLines(text: string) {
   return { lines, measureRef };
 }
 
+function PersonMoonNode({
+  id,
+  node,
+  selected,
+  highlight,
+  onUnpin,
+}: {
+  id: string;
+  node: MindMapNode;
+  selected?: boolean;
+  highlight?: NodeHighlight;
+  onUnpin?: (id: string) => void;
+}) {
+  const style = NODE_TYPE_CONFIG.person;
+  const initials = initialsFromName(node.name);
+  const { dropHover, dropActive } = useDropHover(id);
+
+  return (
+    <div
+      className="group relative"
+      style={{ width: PERSON_NODE_SIZE, height: PERSON_NODE_SIZE }}
+      aria-label={node.name}
+    >
+      <CenterHandles />
+      <div className="relative h-full w-full">
+        <PinBadge pinned={node.pinned} onUnpin={() => onUnpin?.(node.id)} />
+        <div
+          className={cn(
+            "relative h-full w-full overflow-hidden rounded-full border-2 shadow-sm box-border",
+            style.border,
+            style.bg,
+            highlightRing(selected, highlight),
+            dropHover && "ring-2 ring-offset-1 ring-sky-500 shadow-md",
+          )}
+        >
+          <div className="absolute inset-0 grid place-items-center overflow-hidden rounded-full leading-none">
+            {node.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote LinkedIn/OG hotlinks by design
+              <img
+                src={node.imageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span
+                className={cn(
+                  "block text-center text-[8px] font-semibold leading-none",
+                  style.text,
+                )}
+              >
+                {initials || "?"}
+              </span>
+            )}
+          </div>
+          <DropTarget active={dropActive} />
+          <ConnectionAnchors selected={selected} connectable={!!selected} />
+        </div>
+      </div>
+      <p
+        className={cn(
+          "pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md bg-background/95 px-1.5 py-0.5 text-[10px] font-semibold leading-none opacity-0 shadow-sm ring-1 ring-foreground/10 group-hover:opacity-100",
+          style.text,
+        )}
+      >
+        {node.name}
+      </p>
+    </div>
+  );
+}
+
 function BoxedLabelNode({
   id,
   node,
@@ -333,12 +405,11 @@ export function MindMapFlowNode({ id, data, selected }: NodeProps) {
 
   if (node.type === "person") {
     return (
-      <AvatarTileNode
+      <PersonMoonNode
         id={id}
         node={node}
         selected={selected}
         highlight={highlight}
-        rounded="full"
         onUnpin={onUnpin}
       />
     );

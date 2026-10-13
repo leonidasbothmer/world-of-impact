@@ -1,7 +1,7 @@
 import type { MindMapData, MindMapEdge, MindMapNode } from "@/types/mindmap";
 
 /** Tags that belong on the private overlay, never the shared graph. */
-export const PRIVATE_TAGS = new Set(["contact", "contacted"]);
+export const PRIVATE_TAGS = new Set(["contact", "contacted", "tracked"]);
 
 export type PrivateContactFields = {
   orgEmail?: string;

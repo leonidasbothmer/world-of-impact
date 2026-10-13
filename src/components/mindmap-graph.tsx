@@ -149,11 +149,22 @@ function edgeStyle(
     : { strokeWidth: 1.35, opacity: focused ? 0.08 : 0.2 };
 }
 
+function canvasZIndex(
+  type: NodeType,
+  selected: boolean,
+  highlight?: NodeHighlight,
+) {
+  const rank = nodeZIndex(selected, highlight);
+  if (type === "person" && rank < 3) return 3;
+  return rank;
+}
+
 function nodeFocusStyle(
   selectedId: string | null,
   nodeId: string,
   highlight?: NodeHighlight,
   edgeFocused = false,
+  type?: NodeType,
 ) {
   const dimmed = edgeFocused
     ? highlight !== "endpoint"
@@ -161,6 +172,7 @@ function nodeFocusStyle(
   return {
     opacity: dimmed ? 0.4 : 1,
     transition: "opacity 150ms ease",
+    ...(type === "person" ? { overflow: "visible" as const } : {}),
   };
 }
 
@@ -181,8 +193,8 @@ function toFlowNodes(
       position: node.position,
       data: { node, onUnpin, highlight },
       selected,
-      zIndex: nodeZIndex(selected, highlight),
-      style: nodeFocusStyle(selectedId, node.id, highlight, edgeFocused),
+      zIndex: canvasZIndex(node.type, selected, highlight),
+      style: nodeFocusStyle(selectedId, node.id, highlight, edgeFocused, node.type),
     };
   });
 }
@@ -590,20 +602,22 @@ function MindMapGraphInner({
             nextNeighbors,
             endpoints,
           );
+          const source =
+            data.nodes.find((dn) => dn.id === n.id) ??
+            (n.data as { node: MindMapNode }).node;
           return {
             ...n,
             selected,
-            zIndex: nodeZIndex(selected, highlight),
+            zIndex: canvasZIndex(source.type, selected, highlight),
             style: nodeFocusStyle(
               selectedNodeId,
               n.id,
               highlight,
               endpoints.size > 0,
+              source.type,
             ),
             data: {
-              node:
-                data.nodes.find((dn) => dn.id === n.id) ??
-                (n.data as { node: MindMapNode }).node,
+              node: source,
               onUnpin: unpinNode,
               highlight,
             },

@@ -1,5 +1,8 @@
 import type { NodeType } from "@/types/mindmap";
 
+/** Person moons are a fixed circle. The name is hover-only and not part of the box. */
+export const PERSON_NODE_SIZE = 24;
+
 export const NODE_TYPE_CONFIG: Record<
   NodeType,
   { label: string; bg: string; border: string; text: string; dot: string }

@@ -11,6 +11,7 @@ import {
 } from "@/components/mindmap-graph";
 import { NodeSearch, type SearchCreateInput } from "@/components/node-search";
 import { NodePanel } from "@/components/node-panel";
+import { JobTracker } from "@/components/job-tracker";
 import { OrgTable } from "@/components/org-table";
 import { AddNodeForm } from "@/components/add-node-form";
 import { AccountMenu, type AccountProfile } from "@/components/account-menu";
@@ -29,6 +30,7 @@ import {
   loadHiddenTypes,
   saveHiddenTypes,
 } from "@/lib/visible-nodes";
+import { withTracked } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
 import { fetchMindMap, patchMindMap } from "@/lib/mindmap-client";
 import type {
@@ -71,7 +73,7 @@ export function MindMapApp({
   const [hiddenTypes, setHiddenTypes] = useState<NodeType[]>([
     ...DEFAULT_HIDDEN_TYPES,
   ]);
-  const [view, setView] = useState<"graph" | "table">("graph");
+  const [view, setView] = useState<"graph" | "table" | "tracker">("graph");
   const [focusIds, setFocusIds] = useState<string[]>([]);
   const [showFullGraph, setShowFullGraph] = useState(true);
   const hiddenTypeSet = useMemo(
@@ -359,6 +361,71 @@ export function MindMapApp({
             return rest;
           })()
         : { ...node, locations };
+    commit(
+      {
+        ...current,
+        nodes: current.nodes.map((item) =>
+          item.id === id ? nextNode : item,
+        ),
+      },
+      { immediate: true, action: { action: "updateNode", node: nextNode } },
+    );
+  }
+
+  function handleSetTracked(id: string, tracked: boolean) {
+    const current = dataRef.current;
+    if (!current) return;
+    const node = current.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return;
+    const nextNode = withTracked(node, tracked);
+    if ((nextNode.tags ?? []).join("\0") === (node.tags ?? []).join("\0")) {
+      return;
+    }
+    commit(
+      {
+        ...current,
+        nodes: current.nodes.map((item) =>
+          item.id === id ? nextNode : item,
+        ),
+      },
+      { immediate: true, action: { action: "updateNode", node: nextNode } },
+    );
+  }
+
+  function handlePatchPerson(
+    id: string,
+    patch: { linkedIn?: string; imageUrl?: string; onlyIfLinkedIn?: string },
+  ) {
+    const current = dataRef.current;
+    if (!current) return;
+    const node = current.nodes.find((item) => item.id === id);
+    if (!node) return;
+    if (
+      patch.onlyIfLinkedIn &&
+      (node.linkedIn ?? "") !== patch.onlyIfLinkedIn &&
+      (node.linkedIn ?? "") !== (patch.linkedIn ?? "").trim()
+    ) {
+      return;
+    }
+
+    let nextNode: MindMapNode = { ...node };
+    if (patch.linkedIn !== undefined) {
+      const value = patch.linkedIn.trim();
+      if (value) nextNode = { ...nextNode, linkedIn: value };
+      else {
+        const { linkedIn: _removed, ...rest } = nextNode;
+        nextNode = rest;
+      }
+    }
+    if (patch.imageUrl?.trim()) {
+      nextNode = { ...nextNode, imageUrl: patch.imageUrl.trim() };
+    }
+    if (
+      (nextNode.linkedIn ?? "") === (node.linkedIn ?? "") &&
+      (nextNode.imageUrl ?? "") === (node.imageUrl ?? "")
+    ) {
+      return;
+    }
     commit(
       {
         ...current,
@@ -845,7 +912,11 @@ export function MindMapApp({
           ) : null}
           {authEnabled ? (
             signedIn && accountProfile ? (
-              <AccountMenu profile={accountProfile} />
+              <AccountMenu
+                profile={accountProfile}
+                jobTrackerActive={view === "tracker"}
+                onOpenJobTracker={() => setView("tracker")}
+              />
             ) : (
               <Link
                 href="/login"
@@ -942,9 +1013,9 @@ export function MindMapApp({
         <main
           className={cn(
             "relative min-h-[50vh] flex-1 md:min-h-0",
-            view === "table" && "hidden",
+            view !== "graph" && "hidden",
           )}
-          inert={view === "table"}
+          inert={view !== "graph"}
         >
           <ReactFlowProvider>
             <MindMapGraph
@@ -969,6 +1040,18 @@ export function MindMapApp({
               }
               onPatchField={canEdit ? handlePatchOrg : () => undefined}
               onOpenOnGraph={handleSearchSelect}
+            />
+          </div>
+        ) : null}
+
+        {view === "tracker" ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <JobTracker
+              nodes={data.nodes}
+              selectedNodeId={selectedNodeId}
+              onOpenOnGraph={handleSearchSelect}
+              onSetTracked={canEdit ? handleSetTracked : () => undefined}
+              onPatchLink={canEdit ? handlePatchPerson : () => undefined}
             />
           </div>
         ) : null}

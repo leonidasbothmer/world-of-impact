@@ -260,7 +260,7 @@ export function OrgTable({
   );
 }
 
-function TextCell({
+export function TextCell({
   value,
   label,
   name,

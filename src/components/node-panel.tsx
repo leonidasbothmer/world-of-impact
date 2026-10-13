@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LocationSuggestInput } from "@/components/location-suggest-input";
 import { appendLocation, collectLocations, normalizeLocation } from "@/lib/locations";
+import { TRACKED_TAG, isTracked, visibleTags } from "@/lib/tracking";
 import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
 import { cn } from "@/lib/utils";
 import type { MindMapData, MindMapNode, NodeType } from "@/types/mindmap";
@@ -72,7 +73,7 @@ function isPanelDirty(
   for (const key of TEXT_FIELDS) {
     if ((draft[key] ?? "") !== (node[key] ?? "")) return true;
   }
-  if (!sameList(splitTags(tagsInput), node.tags)) return true;
+  if (!sameList(splitTags(tagsInput), visibleTags(node.tags))) return true;
   if (!sameList(draft.locations, node.locations)) return true;
   if (normalizeLocation(locationDraft)) return true;
   return false;
@@ -129,7 +130,7 @@ export function NodePanel({
     if (!switched && dirtyRef.current) return;
     seenNodeIdRef.current = node.id;
     setDraft(node);
-    setTagsInput(node.tags?.join(", ") ?? "");
+    setTagsInput(visibleTags(node.tags).join(", "));
     setLocationDraft("");
     if (switched) {
       setEdgeTarget("");
@@ -193,6 +194,7 @@ export function NodePanel({
     const trimmed = name.trim();
     if (!trimmed) return;
     const tags = splitTags(tagsInput);
+    if (isTracked(node)) tags.push(TRACKED_TAG);
     const locations = locationsWithPending(draft.locations, locationDraft);
     const next: MindMapNode = {
       ...draft,
@@ -204,7 +206,7 @@ export function NodePanel({
     };
     if (locations.length === 0) delete next.locations;
     if (!next.careerPage?.trim()) delete next.careerPage;
-    setTagsInput(tags.join(", "));
+    setTagsInput(visibleTags(tags).join(", "));
     setLocationDraft("");
     setDraft(next);
     setSaving(true);

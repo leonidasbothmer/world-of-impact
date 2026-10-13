@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { LogOut } from "lucide-react";
+import { Briefcase, ChevronLeft, LogOut, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,20 @@ export type AccountProfile = {
   position: string;
 };
 
-export function AccountMenu({ profile }: { profile: AccountProfile }) {
+export function AccountMenu({
+  profile,
+  jobTrackerActive = false,
+  onOpenJobTracker,
+}: {
+  profile: AccountProfile;
+  jobTrackerActive?: boolean;
+  onOpenJobTracker?: () => void;
+}) {
   const router = useRouter();
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState<"menu" | "profile">("menu");
   const [linkedIn, setLinkedIn] = useState(profile.linkedIn);
   const [company, setCompany] = useState(profile.company);
   const [position, setPosition] = useState(profile.position);
@@ -34,13 +43,21 @@ export function AccountMenu({ profile }: { profile: AccountProfile }) {
     setPosition(profile.position);
   }, [profile.linkedIn, profile.company, profile.position]);
 
+  function close() {
+    setOpen(false);
+    setPanel("menu");
+  }
+
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) close();
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        if (panel === "profile") setPanel("menu");
+        else close();
+      }
     }
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
@@ -48,7 +65,7 @@ export function AccountMenu({ profile }: { profile: AccountProfile }) {
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, panel]);
 
   function edit(setter: (value: string) => void, value: string) {
     setter(value);
@@ -88,9 +105,12 @@ export function AccountMenu({ profile }: { profile: AccountProfile }) {
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
-        title="Profile"
+        title="Account"
         className="inline-flex h-7 max-w-44 items-center gap-1.5 rounded-full border border-border bg-background py-0.5 pr-2.5 pl-1 text-[0.8rem] font-medium hover:bg-muted"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          if (open) close();
+          else setOpen(true);
+        }}
       >
         <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold uppercase">
           {name.charAt(0)}
@@ -100,12 +120,55 @@ export function AccountMenu({ profile }: { profile: AccountProfile }) {
       {open ? (
         <div
           id={panelId}
-          role="dialog"
-          aria-label="Profile"
-          className="absolute right-0 top-full z-50 mt-1 w-72 rounded-lg border bg-popover p-3 shadow-md"
+          role={panel === "profile" ? "dialog" : "menu"}
+          aria-label={panel === "profile" ? "Profile" : "Account"}
+          className={`absolute right-0 top-full z-50 mt-1 rounded-lg border bg-popover shadow-md ${panel === "profile" ? "w-72 p-3" : "w-52 p-1.5"}`}
         >
+          {panel === "menu" ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                onClick={() => setPanel("profile")}
+              >
+                <UserRound className="size-3.5" />
+                Profile
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                aria-current={jobTrackerActive ? "page" : undefined}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted${jobTrackerActive ? " bg-muted" : ""}`}
+                onClick={() => {
+                  close();
+                  onOpenJobTracker?.();
+                }}
+              >
+                <Briefcase className="size-3.5" />
+                Job tracker
+              </button>
+              <form action="/auth/signout" method="post" className="mt-1 border-t pt-1">
+                <button
+                  type="submit"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <LogOut className="size-3.5" />
+                  Sign out
+                </button>
+              </form>
+            </>
+          ) : (
           <form onSubmit={onSubmit} className="space-y-3">
-            <p className="text-sm font-medium">Profile</p>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-sm font-medium"
+              onClick={() => setPanel("menu")}
+            >
+              <ChevronLeft className="size-3.5" />
+              Profile
+            </button>
             <div className="space-y-1.5">
               <Label htmlFor={`${panelId}-linkedin`} className="text-xs">
                 LinkedIn
@@ -161,15 +224,7 @@ export function AccountMenu({ profile }: { profile: AccountProfile }) {
               {status === "saving" ? "Saving…" : "Save profile"}
             </Button>
           </form>
-          <form action="/auth/signout" method="post" className="mt-2 border-t pt-2">
-            <button
-              type="submit"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-            >
-              <LogOut className="size-3.5" />
-              Sign out
-            </button>
-          </form>
+          )}
         </div>
       ) : null}
     </div>

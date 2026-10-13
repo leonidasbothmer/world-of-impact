@@ -120,6 +120,7 @@ export function NodeSearch({
   }, [draftOpen, edgeOpen, open]);
 
   const showList = open && trimmed.length > 0 && !draftOpen;
+  const showLinkedIn = type === "organization" || type === "person";
   const creating = showList && suggestions.length === 0;
   const displayName = query.trim();
   const optionCount = creating ? 1 : suggestions.length;
@@ -305,7 +306,13 @@ export function NodeSearch({
               <Label className="text-xs">Type</Label>
               <Select
                 value={type}
-                onValueChange={(value) => setType(value as NodeType)}
+                onValueChange={(value) => {
+                  const next = value as NodeType;
+                  setType(next);
+                  if (next !== "organization" && next !== "person") {
+                    linkedInPreview.reset();
+                  }
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -401,15 +408,17 @@ export function NodeSearch({
                 onChange={(event) => setEdgeLabel(event.target.value)}
               />
             </div>
-            <LinkedInField
-              id={`${edgeListId}-linkedin`}
-              value={linkedInPreview.linkedIn}
-              onChange={linkedInPreview.onChange}
-              error={linkedInPreview.error}
-              disabled={linkedInPreview.pending}
-              labelClassName="text-xs"
-              inputClassName="h-8"
-            />
+            {showLinkedIn ? (
+              <LinkedInField
+                id={`${edgeListId}-linkedin`}
+                value={linkedInPreview.linkedIn}
+                onChange={linkedInPreview.onChange}
+                error={linkedInPreview.error}
+                disabled={linkedInPreview.pending}
+                labelClassName="text-xs"
+                inputClassName="h-8"
+              />
+            ) : null}
             <div className="flex gap-2 pt-0.5">
               <Button
                 type="button"

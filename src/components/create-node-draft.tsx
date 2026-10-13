@@ -54,6 +54,7 @@ export function CreateNodeDraft({
   const linkedInPreview = useLinkedInPreview();
   const matches = useMemo(() => matchNodes(nodes, name), [nodes, name]);
   const showSuggestions = suggestionsOpen && matches.length > 0;
+  const showLinkedIn = type === "organization" || type === "person";
   const showSuggestionsRef = useRef(showSuggestions);
   showSuggestionsRef.current = showSuggestions;
 
@@ -173,7 +174,16 @@ export function CreateNodeDraft({
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Type</Label>
-          <Select value={type} onValueChange={(v) => setType(v as NodeType)}>
+          <Select
+            value={type}
+            onValueChange={(v) => {
+              const next = v as NodeType;
+              setType(next);
+              if (next !== "organization" && next !== "person") {
+                linkedInPreview.reset();
+              }
+            }}
+          >
             <SelectTrigger className="h-8">
               <SelectValue />
             </SelectTrigger>
@@ -186,15 +196,17 @@ export function CreateNodeDraft({
             </SelectContent>
           </Select>
         </div>
-        <LinkedInField
-          id="draft-linkedin"
-          value={linkedInPreview.linkedIn}
-          onChange={linkedInPreview.onChange}
-          error={linkedInPreview.error}
-          disabled={linkedInPreview.pending}
-          labelClassName="text-xs"
-          inputClassName="h-8"
-        />
+        {showLinkedIn ? (
+          <LinkedInField
+            id="draft-linkedin"
+            value={linkedInPreview.linkedIn}
+            onChange={linkedInPreview.onChange}
+            error={linkedInPreview.error}
+            disabled={linkedInPreview.pending}
+            labelClassName="text-xs"
+            inputClassName="h-8"
+          />
+        ) : null}
         <div className="flex gap-2">
           <Button
             type="button"
