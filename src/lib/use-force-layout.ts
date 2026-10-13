@@ -248,25 +248,27 @@ function forceClusters(model: ClusterModel) {
 
     for (const node of nodes) {
       if (node.fx != null || node.fy != null || node.x == null || node.y == null) continue;
+      let vx = node.vx ?? 0;
+      let vy = node.vy ?? 0;
       const ties = model.ties.get(node.id) ?? [];
       const satellite = ties.length === 1 && ties[0].id.startsWith("c:");
       for (const tie of ties) {
         const centroid = centroids.get(tie.id);
         if (!centroid) continue;
         const strength = pullStrength(tie.dist);
-        node.vx += (centroid.x - node.x) * strength * alpha;
-        node.vy += (centroid.y - node.y) * strength * alpha;
+        vx += (centroid.x - node.x) * strength * alpha;
+        vy += (centroid.y - node.y) * strength * alpha;
       }
       if (ties.length === 1) {
         const shift = push.get(ties[0].id);
         const follow = drag.get(ties[0].id);
         if (shift) {
-          node.vx += shift.x;
-          node.vy += shift.y;
+          vx += shift.x;
+          vy += shift.y;
         }
         if (follow) {
-          node.vx += follow.x;
-          node.vy += follow.y;
+          vx += follow.x;
+          vy += follow.y;
         }
       }
       if (satellite) {
@@ -275,11 +277,13 @@ function forceClusters(model: ClusterModel) {
         const distance = Math.hypot(dx, dy) || 1;
         const gap = distance - rim * 0.92;
         const gain = gap > 0 ? 0.35 : 0.08;
-        node.vx += (dx / distance) * gap * gain * alpha;
-        node.vy += (dy / distance) * gap * gain * alpha;
+        vx += (dx / distance) * gap * gain * alpha;
+        vy += (dy / distance) * gap * gain * alpha;
       }
-      node.vx += (meanX - node.x) * constellation * alpha;
-      node.vy += (meanY - node.y) * constellation * alpha;
+      vx += (meanX - node.x) * constellation * alpha;
+      vy += (meanY - node.y) * constellation * alpha;
+      node.vx = vx;
+      node.vy = vy;
     }
   }
 
