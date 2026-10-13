@@ -1,12 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Archive, ArchiveRestore, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ApplicationChartSection } from "@/components/application-chart";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { TextCell } from "@/components/org-table";
 import { Input } from "@/components/ui/input";
-import { isTracked } from "@/lib/tracking";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  TRACK_STATUSES,
+  isTracked,
+  readTrackState,
+  calendarDate,
+  formatTrackDate,
+  shownTrackStatus,
+  type TrackStatus,
+} from "@/lib/tracking";
 import { cn } from "@/lib/utils";
-import type { MindMapNode } from "@/types/mindmap";
+import type { MindMapEdge, MindMapNode } from "@/types/mindmap";
 
 export type TrackerLinkPatch = {
   linkedIn?: string;
@@ -17,9 +35,14 @@ export type TrackerLinkPatch = {
 
 type JobTrackerProps = {
   nodes: MindMapNode[];
+  edges: MindMapEdge[];
   selectedNodeId: string | null;
   onOpenOnGraph: (id: string) => void;
   onSetTracked: (id: string, tracked: boolean) => void;
+  onSetStatus: (id: string, status: TrackStatus) => void;
+  onSetArchived: (id: string, archived: boolean) => void;
+  onSetRole: (id: string, role: string) => void;
+  onSetDate: (id: string, field: "appliedOn" | "updatedOn", value: string) => void;
   onPatchLink: (id: string, patch: TrackerLinkPatch) => void;
 };
 
@@ -36,16 +59,19 @@ function TrackerAvatar({
   name,
   imageUrl,
   rounded,
+  className,
 }: {
   name: string;
   imageUrl?: string;
   rounded: "full" | "md";
+  className?: string;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex size-7 shrink-0 items-center justify-center overflow-hidden border bg-muted",
+        "inline-flex size-5 shrink-0 items-center justify-center overflow-hidden border bg-muted",
         rounded === "full" ? "rounded-full" : "rounded-md",
+        className,
       )}
     >
       {imageUrl ? (
@@ -58,7 +84,7 @@ function TrackerAvatar({
           referrerPolicy="no-referrer"
         />
       ) : (
-        <span className="text-[10px] font-semibold text-muted-foreground">
+        <span className="text-[8px] font-semibold leading-none text-muted-foreground">
           {initials(name) || "?"}
         </span>
       )}
@@ -66,50 +92,96 @@ function TrackerAvatar({
   );
 }
 
+function roleHref(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed || /\s/.test(trimmed)) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^[^\s]+\.[^\s]{2,}/.test(trimmed)) return `https://${trimmed}`;
+  return null;
+}
+
+function connectedPeople(
+  nodes: MindMapNode[],
+  edges: MindMapEdge[],
+): Map<string, MindMapNode[]> {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const grouped = new Map<string, MindMapNode[]>();
+  for (const edge of edges) {
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
+    if (!source || !target) continue;
+    const organization =
+      source.type === "organization"
+        ? source
+        : target.type === "organization"
+          ? target
+          : null;
+    const person =
+      source.type === "person"
+        ? source
+        : target.type === "person"
+          ? target
+          : null;
+    if (!organization || !person) continue;
+    const list = grouped.get(organization.id) ?? [];
+    if (!list.some((item) => item.id === person.id)) list.push(person);
+    grouped.set(organization.id, list);
+  }
+  for (const list of grouped.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return grouped;
+}
+
 export function JobTracker({
   nodes,
+  edges,
   selectedNodeId,
   onOpenOnGraph,
   onSetTracked,
+  onSetStatus,
+  onSetArchived,
+  onSetRole,
+  onSetDate,
   onPatchLink,
 }: JobTrackerProps) {
-  const [section, setSection] = useState<"organizations" | "people">(
-    "organizations",
-  );
   const [query, setQuery] = useState("");
   const [addQuery, setAddQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
 
-  const organizations = useMemo(
-    () =>
-      nodes
-        .filter((node) => node.type === "organization" && isTracked(node))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [nodes],
-  );
-  const people = useMemo(
-    () =>
-      nodes
-        .filter((node) => node.type === "person")
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [nodes],
+  function setStatus(id: string, status: TrackStatus) {
+    onSetStatus(id, status);
+    if (status === "denied") setArchivedOpen(true);
+  }
+
+  const organizations = useMemo(() => {
+    const tracked = nodes
+      .filter((node) => node.type === "organization" && isTracked(node))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const active: MindMapNode[] = [];
+    const archived: MindMapNode[] = [];
+    for (const node of tracked) {
+      if (readTrackState(node)?.archived) archived.push(node);
+      else active.push(node);
+    }
+    return { active, archived };
+  }, [nodes]);
+  const peopleByOrg = useMemo(
+    () => connectedPeople(nodes, edges),
+    [nodes, edges],
   );
 
   const needle = query.trim().toLowerCase();
-  const orgRows = organizations.filter((node) => {
+  function matchesQuery(node: MindMapNode) {
     if (!needle) return true;
     return (
       node.name.toLowerCase().includes(needle) ||
       (node.linkedIn ?? "").toLowerCase().includes(needle)
     );
-  });
-  const peopleRows = people.filter((node) => {
-    if (!needle) return true;
-    return (
-      node.name.toLowerCase().includes(needle) ||
-      (node.linkedIn ?? "").toLowerCase().includes(needle)
-    );
-  });
+  }
+  const orgRows = organizations.active.filter(matchesQuery);
+  const archivedRows = organizations.archived.filter(matchesQuery);
 
   const addNeedle = addQuery.trim().toLowerCase();
   const addMatches = useMemo(() => {
@@ -149,52 +221,16 @@ export function JobTracker({
     }
   }
 
-  const rows = section === "people" ? peopleRows : orgRows;
-  const total = section === "people" ? people.length : organizations.length;
+  const total = organizations.active.length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
-        <h2 className="text-sm font-medium">Job tracker</h2>
-        <div
-          className="inline-flex rounded-lg border bg-muted/40 p-0.5"
-          role="tablist"
-          aria-label="Job tracker"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === "organizations"}
-            className={cn(
-              "rounded-md px-2 py-0.5 text-xs font-medium",
-              section === "organizations"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground",
-            )}
-            onClick={() => setSection("organizations")}
-          >
-            Organizations
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={section === "people"}
-            className={cn(
-              "rounded-md px-2 py-0.5 text-xs font-medium",
-              section === "people"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground",
-            )}
-            onClick={() => setSection("people")}
-          >
-            People
-          </button>
-        </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
+        <h2 className="text-xs font-medium">Job tracker</h2>
         <span className="text-xs text-muted-foreground">
-          {rows.length === total ? total : `${rows.length} of ${total}`}
+          {orgRows.length === total ? total : `${orgRows.length} of ${total}`}
         </span>
-        {section === "organizations" ? (
-          <div className="relative w-52">
+        <div className="relative w-52">
             <Input
               value={addQuery}
               onChange={(event) => {
@@ -207,7 +243,7 @@ export function JobTracker({
               }}
               placeholder="Add organization"
               aria-label="Add an organization to the job tracker"
-              className="h-7 text-xs"
+              className="h-6 text-xs"
             />
             {addOpen && addMatches.length > 0 ? (
               <ul className="absolute top-full right-0 left-0 z-20 mt-1 max-h-48 overflow-auto rounded-md border bg-popover p-1 shadow-md">
@@ -235,107 +271,524 @@ export function JobTracker({
               </ul>
             ) : null}
           </div>
-        ) : null}
         <div className="ml-auto w-48">
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter by name"
-            aria-label={
-              section === "people"
-                ? "Filter people by name"
-                : "Filter tracked organizations by name"
-            }
-            className="h-7 text-xs"
+            aria-label="Filter tracked organizations by name"
+            className="h-6 text-xs"
           />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+        <table className="w-full min-w-[920px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "8.25rem" }} />
+            <col style={{ width: "5.5rem" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "7.75rem" }} />
+            <col style={{ width: "7.75rem" }} />
+            <col />
+            <col style={{ width: "3.75rem" }} />
+          </colgroup>
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="w-[40%] px-3 py-2 font-medium">Name</th>
-              <th className="px-2 py-2 font-medium">LinkedIn</th>
-              {section === "organizations" ? (
-                <th className="w-10 px-2 py-2 font-medium">
-                  <span className="sr-only">Remove</span>
-                </th>
-              ) : null}
+              <th className="px-3 py-1.5 font-medium">Name</th>
+              <th className="px-2 py-1.5 font-medium">Status</th>
+              <th className="px-2 py-1.5 font-medium">People</th>
+              <th className="px-2 py-1.5 font-medium">Position</th>
+              <th className="px-2 py-1.5 font-medium">Applied</th>
+              <th className="px-2 py-1.5 font-medium">Last updated</th>
+              <th className="px-2 py-1.5 font-medium">LinkedIn</th>
+              <th className="px-2 py-1.5 font-medium">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {orgRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={section === "organizations" ? 3 : 2}
-                  className="px-3 py-10 text-center text-sm text-muted-foreground"
+                  colSpan={8}
+                  className="px-3 py-8 text-center text-xs text-muted-foreground"
                 >
-                  {section === "people"
-                    ? people.length === 0
-                      ? "No people yet."
-                      : "No people match this filter."
-                    : organizations.length === 0
-                      ? "Nothing tracked yet. Add an organization above."
-                      : "No organizations match this filter."}
+                  {organizations.active.length + organizations.archived.length === 0
+                    ? "Nothing tracked yet. Add an organization above."
+                    : needle
+                      ? "No organizations match this filter."
+                      : "No open applications."}
                 </td>
               </tr>
             ) : (
-              rows.map((node) => (
-                <tr
+              orgRows.map((node) => (
+                <TrackerRow
                   key={node.id}
-                  className={cn(
-                    "border-b align-middle",
-                    node.id === selectedNodeId && "bg-muted/50",
-                  )}
-                >
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="flex items-center gap-2 text-left font-medium hover:underline"
-                      onClick={() => onOpenOnGraph(node.id)}
-                    >
-                      <TrackerAvatar
-                        name={node.name}
-                        imageUrl={node.imageUrl}
-                        rounded={node.type === "person" ? "full" : "md"}
-                      />
-                      {node.name}
-                    </button>
-                  </td>
-                  <TextCell
-                    field="linkedIn"
-                    label="LinkedIn"
-                    name={node.name}
-                    placeholder={
-                      node.type === "person"
-                        ? "LinkedIn profile"
-                        : "LinkedIn"
-                    }
-                    link
-                    value={node.linkedIn ?? ""}
-                    onCommit={(value) => {
+                  node={node}
+                  selected={node.id === selectedNodeId}
+                  archived={false}
+                  onOpenOnGraph={onOpenOnGraph}
+                  onSetTracked={onSetTracked}
+                  onSetStatus={setStatus}
+                  onSetArchived={onSetArchived}
+                  onSetRole={onSetRole}
+                  onSetDate={onSetDate}
+                  people={peopleByOrg.get(node.id) ?? []}
+                  onCommitLinkedIn={(value) => {
+                    void commitLinkedIn(node.id, value);
+                  }}
+                />
+              ))
+            )}
+            {archivedRows.length > 0 ? (
+              <tr className="border-b">
+                <td colSpan={8} className="p-0">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-medium text-muted-foreground hover:bg-muted/50"
+                    aria-expanded={archivedOpen}
+                    onClick={() => setArchivedOpen((open) => !open)}
+                  >
+                    <ChevronRight
+                      className={cn(
+                        "size-3.5 transition-transform",
+                        archivedOpen && "rotate-90",
+                      )}
+                    />
+                    Archived
+                    <span>{archivedRows.length}</span>
+                  </button>
+                </td>
+              </tr>
+            ) : null}
+            {archivedOpen
+              ? archivedRows.map((node) => (
+                  <TrackerRow
+                    key={node.id}
+                    node={node}
+                    selected={node.id === selectedNodeId}
+                    archived
+                    onOpenOnGraph={onOpenOnGraph}
+                    onSetTracked={onSetTracked}
+                    onSetStatus={setStatus}
+                    onSetArchived={onSetArchived}
+                    onSetRole={onSetRole}
+                    onSetDate={onSetDate}
+                    people={peopleByOrg.get(node.id) ?? []}
+                    onCommitLinkedIn={(value) => {
                       void commitLinkedIn(node.id, value);
                     }}
                   />
-                  {section === "organizations" ? (
-                    <td className="px-2 py-1">
-                      <button
-                        type="button"
-                        className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        aria-label={`Remove ${node.name} from the job tracker`}
-                        onClick={() => onSetTracked(node.id, false)}
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </td>
-                  ) : null}
-                </tr>
-              ))
-            )}
+                ))
+              : null}
           </tbody>
         </table>
       </div>
+      <ApplicationChartSection nodes={nodes} />
     </div>
   );
+}
+
+function TrackerRow({
+  node,
+  selected,
+  archived,
+  people,
+  onOpenOnGraph,
+  onSetTracked,
+  onSetStatus,
+  onSetArchived,
+  onSetRole,
+  onSetDate,
+  onCommitLinkedIn,
+}: {
+  node: MindMapNode;
+  selected: boolean;
+  archived: boolean;
+  people: MindMapNode[];
+  onOpenOnGraph: (id: string) => void;
+  onSetTracked: (id: string, tracked: boolean) => void;
+  onSetStatus: (id: string, status: TrackStatus) => void;
+  onSetArchived: (id: string, archived: boolean) => void;
+  onSetRole: (id: string, role: string) => void;
+  onSetDate: (id: string, field: "appliedOn" | "updatedOn", value: string) => void;
+  onCommitLinkedIn: (value: string) => void;
+}) {
+  const state = readTrackState(node);
+  const shown = state ? shownTrackStatus(state) : "todo";
+  const status = TRACK_STATUSES.find((item) => item.value === shown);
+  const role = state?.role ?? "";
+  const stale =
+    shown === "followup" && state?.status === "running";
+
+  return (
+    <tr className={cn("border-b align-middle", selected && "bg-muted/50")}>
+      <td className="px-3 py-1">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-left font-medium hover:underline"
+          onClick={() => onOpenOnGraph(node.id)}
+        >
+          <TrackerAvatar
+            name={node.name}
+            imageUrl={node.imageUrl}
+            rounded="md"
+          />
+          {node.name}
+        </button>
+      </td>
+      <td className="px-2 py-1">
+          <Select
+            value={shown}
+            onValueChange={(value) => {
+              if (value == null || !isTrackStatus(value)) return;
+              onSetStatus(node.id, value);
+            }}
+          >
+            <SelectTrigger
+              size="xs"
+              className={cn("w-full", status?.chip)}
+              title={
+                stale
+                  ? "In progress for three weeks with no response. Get back to them."
+                  : undefined
+              }
+              aria-label={`Status for ${node.name}`}
+            >
+              <SelectValue>
+                <span className={cn("size-1.5 rounded-full", status?.dot)} />
+                {status?.label}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="start" alignItemWithTrigger={false} className="text-xs">
+              {TRACK_STATUSES.map((item) => (
+                <SelectItem key={item.value} value={item.value} className="py-1 text-xs">
+                  <span className={cn("size-1.5 rounded-full", item.dot)} />
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+      <td className="px-2 py-1">
+          {people.length === 0 ? (
+            <span className="text-xs text-muted-foreground">—</span>
+          ) : (
+            <div className="flex items-center pl-1">
+              {people.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  className="group relative -ml-1.5 rounded-full ring-2 ring-background first:ml-0"
+                  aria-label={person.name}
+                  onClick={() => onOpenOnGraph(person.id)}
+                >
+                  <TrackerAvatar
+                    name={person.name}
+                    imageUrl={person.imageUrl}
+                    rounded="full"
+                    className="size-4 border-0"
+                  />
+                  <span className="pointer-events-none absolute top-full left-1/2 z-20 mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background group-hover:block group-focus-visible:block">
+                    {person.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </td>
+      <TextCell
+          field="role"
+          label="Position"
+          name={node.name}
+          placeholder="Link or speculative"
+          link={Boolean(roleHref(role))}
+          value={role}
+          compact
+          onCommit={(value) => onSetRole(node.id, value)}
+        />
+      <TrackDateCell
+          value={state?.appliedOn}
+          label="Applied date"
+          name={node.name}
+          onChange={(value) => onSetDate(node.id, "appliedOn", value)}
+        />
+      <TrackDateCell
+          value={state?.updatedOn}
+          label="Last updated"
+          name={node.name}
+          onChange={(value) => onSetDate(node.id, "updatedOn", value)}
+        />
+      <TextCell
+        field="linkedIn"
+        label="LinkedIn"
+        name={node.name}
+        placeholder="LinkedIn"
+        link
+        value={node.linkedIn ?? ""}
+        compact
+        onCommit={onCommitLinkedIn}
+      />
+      <td className="px-2 py-1">
+          <div className="relative flex w-full items-center justify-end">
+            <button
+              type="button"
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={
+                archived
+                  ? `Restore ${node.name} from the archive`
+                  : `Archive ${node.name}`
+              }
+              onClick={() => onSetArchived(node.id, !archived)}
+            >
+              {archived ? (
+                <ArchiveRestore className="size-3" />
+              ) : (
+                <Archive className="size-3" />
+              )}
+            </button>
+            <ConfirmDelete
+              label={`Remove ${node.name} from the job tracker`}
+              prompt="Remove?"
+              size="icon-xs"
+              overlay
+              icon={<X />}
+              className="text-muted-foreground"
+              onConfirm={() => onSetTracked(node.id, false)}
+            />
+          </div>
+        </td>
+    </tr>
+  );
+}
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+function parseCalendarDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (
+    date.getFullYear() !== Number(match[1]) ||
+    date.getMonth() !== Number(match[2]) - 1 ||
+    date.getDate() !== Number(match[3])
+  ) {
+    return null;
+  }
+  return date;
+}
+
+function monthCells(month: Date): Date[] {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const mondayIndex = (first.getDay() + 6) % 7;
+  const start = new Date(first);
+  start.setDate(1 - mondayIndex);
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+}
+
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function TrackDateCell({
+  value,
+  label,
+  name,
+  onChange,
+}: {
+  value?: string;
+  label: string;
+  name: string;
+  onChange: (value: string) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [box, setBox] = useState<DOMRect | null>(null);
+  const selected = parseCalendarDate(value);
+  const [month, setMonth] = useState(() => {
+    const initial = selected ?? new Date();
+    return new Date(initial.getFullYear(), initial.getMonth(), 1);
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    function place() {
+      const next = buttonRef.current?.getBoundingClientRect();
+      if (next) setBox(next);
+    }
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  const days = useMemo(() => monthCells(month), [month]);
+  const today = new Date();
+  const placeAbove = box != null && box.bottom + 248 > window.innerHeight && box.top > 248;
+
+  function toggle() {
+    const initial = selected ?? new Date();
+    setMonth(new Date(initial.getFullYear(), initial.getMonth(), 1));
+    setBox(buttonRef.current?.getBoundingClientRect() ?? null);
+    setOpen((current) => !current);
+  }
+
+  function choose(date: Date) {
+    onChange(calendarDate(date));
+    setOpen(false);
+  }
+
+  return (
+    <td className="px-2 py-1">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={`${label} for ${name}`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className={cn(
+          "flex h-6 w-full cursor-pointer items-center text-left text-xs",
+          value ? "text-foreground" : "text-muted-foreground",
+        )}
+        onClick={toggle}
+      >
+        {value ? formatTrackDate(value) : "—"}
+      </button>
+      {open && box
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-label={`${label} for ${name}`}
+              className="fixed z-50 w-48 rounded-md border bg-popover p-1.5 text-xs text-popover-foreground shadow-md"
+              style={{
+                left: box.left,
+                top: placeAbove ? box.top - 4 : box.bottom + 4,
+                transform: placeAbove ? "translateY(-100%)" : undefined,
+              }}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Previous month"
+                  onClick={() =>
+                    setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))
+                  }
+                >
+                  <ChevronLeft className="size-3.5" />
+                </button>
+                <span className="text-xs font-medium">
+                  {MONTH_NAMES[month.getMonth()]} {month.getFullYear()}
+                </span>
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Next month"
+                  onClick={() =>
+                    setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))
+                  }
+                >
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted-foreground">
+                {WEEKDAYS.map((day) => (
+                  <span key={day} className="py-1">
+                    {day}
+                  </span>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-0.5">
+                {days.map((date) => {
+                  const inMonth = date.getMonth() === month.getMonth();
+                  const isSelected = selected != null && sameDay(date, selected);
+                  const isToday = sameDay(date, today);
+                  return (
+                    <button
+                      key={calendarDate(date)}
+                      type="button"
+                      className={cn(
+                        "h-6 rounded-md text-[11px]",
+                        inMonth ? "text-foreground" : "text-muted-foreground/50",
+                        isSelected && "bg-foreground text-background",
+                        !isSelected && "hover:bg-muted",
+                        isToday && !isSelected && "ring-1 ring-foreground/30",
+                      )}
+                      onClick={() => choose(date)}
+                    >
+                      {date.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t pt-2">
+                <button
+                  type="button"
+                  className="rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => choose(new Date())}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => {
+                    onChange("");
+                    setOpen(false);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </td>
+  );
+}
+
+function isTrackStatus(value: string): value is TrackStatus {
+  return TRACK_STATUSES.some((item) => item.value === value);
 }

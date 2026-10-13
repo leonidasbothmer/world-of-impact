@@ -148,6 +148,10 @@ function PinBadge({
   );
 }
 
+/** Slightly tighter than `rounded-xl` (0.875rem). Image radius is this minus the border. */
+const ORG_TILE_RADIUS = "0.75rem";
+const ORG_TILE_BORDER = "2px";
+
 function useDropHover(id: string) {
   const connection = useConnection();
   const connecting = connection.inProgress;
@@ -185,18 +189,30 @@ function AvatarTileNode({
         <div
           className={cn(
             "relative h-10 w-10 overflow-visible border-2 shadow-sm transition-shadow box-border",
-            rounded === "full" ? "rounded-full" : "rounded-xl",
+            rounded === "full" && "rounded-full",
             style.border,
             style.bg,
             highlightRing(selected, highlight),
             dropHover && "ring-2 ring-offset-2 ring-sky-500 shadow-md",
           )}
+          style={
+            rounded === "full"
+              ? undefined
+              : { borderRadius: ORG_TILE_RADIUS, borderWidth: ORG_TILE_BORDER }
+          }
         >
           <div
             className={cn(
               "absolute inset-0 grid place-items-center overflow-hidden leading-none",
-              rounded === "full" ? "rounded-full" : "rounded-[10px]",
+              rounded === "full" && "rounded-full",
             )}
+            style={
+              rounded === "full"
+                ? undefined
+                : {
+                    borderRadius: `calc(${ORG_TILE_RADIUS} - ${ORG_TILE_BORDER})`,
+                  }
+            }
           >
             {node.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- remote LinkedIn/OG hotlinks by design

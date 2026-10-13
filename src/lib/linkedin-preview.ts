@@ -4,8 +4,16 @@ export type LinkedInPreview = {
   imageUrl?: string;
 };
 
+/** Profile, company, school, or showcase, with optional extra segments such as /home. */
 const PROFILE_PATH =
-  /^\/(?:in|company|school|showcase)\/[^/?#]+$/i;
+  /^\/(in|company|school|showcase)\/([^/?#]+)(?:\/.*)?$/i;
+
+function profilePathname(pathname: string): string | null {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  const match = PROFILE_PATH.exec(path);
+  if (!match) return null;
+  return `/${match[1]}/${match[2]}`;
+}
 
 function isLinkedInHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -39,15 +47,16 @@ export function linkedInTarget(input: string): URL | null {
 
   url.hostname = "www.linkedin.com";
   url.search = "";
-  url.pathname = url.pathname.replace(/\/+$/, "");
-  if (!PROFILE_PATH.test(url.pathname)) return null;
+  const pathname = profilePathname(url.pathname);
+  if (!pathname) return null;
+  url.pathname = pathname;
   return url;
 }
 
 export function canonicalLinkedInUrl(url: URL): string | null {
   if (!isLinkedInHost(url.hostname)) return null;
-  const pathname = url.pathname.replace(/\/+$/, "");
-  if (!PROFILE_PATH.test(pathname)) return null;
+  const pathname = profilePathname(url.pathname);
+  if (!pathname) return null;
   return `https://www.linkedin.com${pathname}`;
 }
 

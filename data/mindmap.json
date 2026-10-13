@@ -1663,8 +1663,8 @@
     },
     {
       "id": "e-biodiversity-asset-nature-wealth",
-      "source": "biodiversity-as-asset",
-      "target": "nature-wealth",
+      "source": "nature-wealth",
+      "target": "biodiversity-as-asset",
       "label": "aligns with"
     },
     {
@@ -1891,8 +1891,8 @@
     },
     {
       "id": "e-e-scooters-1789462803845-bolt-1789462812740-1789462812740",
-      "source": "e-scooters-1789462803845",
-      "target": "bolt-1789462812740"
+      "source": "bolt-1789462812740",
+      "target": "e-scooters-1789462803845"
     },
     {
       "id": "e-bolt-1789462812740-bike-sharing-1789462777461-1789462816946",
@@ -1941,13 +1941,13 @@
     },
     {
       "id": "e-sustainable-cities-1789465064288-berlin-21-1789465072299-1789465072299",
-      "source": "sustainable-cities-1789465064288",
-      "target": "berlin-21-1789465072299"
+      "source": "berlin-21-1789465072299",
+      "target": "sustainable-cities-1789465064288"
     },
     {
       "id": "e-solar-1789461033231-vrey-1789465226648-1789465226648",
-      "source": "solar-1789461033231",
-      "target": "vrey-1789465226648"
+      "source": "vrey-1789465226648",
+      "target": "solar-1789461033231"
     },
     {
       "id": "e-buildings-energy-efficiency-renovation-1789465277057-1789465277057",
@@ -1956,8 +1956,8 @@
     },
     {
       "id": "e-energy-efficiency-renovation-1789465277057-varm-1789465298781-1789465298781",
-      "source": "energy-efficiency-renovation-1789465277057",
-      "target": "varm-1789465298781"
+      "source": "varm-1789465298781",
+      "target": "energy-efficiency-renovation-1789465277057"
     },
     {
       "id": "e-irights-govtech",
@@ -2062,8 +2062,8 @@
     },
     {
       "id": "e-heating-thermondo-1790090370396-1790090370396",
-      "source": "heating",
-      "target": "thermondo-1790090370396"
+      "source": "thermondo-1790090370396",
+      "target": "heating"
     },
     {
       "id": "e-planet-labs-earth-observation",
@@ -2125,8 +2125,8 @@
     },
     {
       "id": "e-design-agencies-a-color-bright-1790152687207",
-      "source": "design-agencies",
-      "target": "a-color-bright"
+      "source": "a-color-bright",
+      "target": "design-agencies"
     },
     {
       "id": "e-open-source-1790090297399-digital-sovereignty-1790152728692",
@@ -2208,8 +2208,8 @@
     },
     {
       "id": "e-solar-1789461033231-enpal-1791457797698-1791457797698",
-      "source": "solar-1789461033231",
-      "target": "enpal-1791457797698"
+      "source": "enpal-1791457797698",
+      "target": "solar-1789461033231"
     },
     {
       "id": "e-the-agentic-state-1791459034400-global-government-technology-center-1789635851412-1791459071092",

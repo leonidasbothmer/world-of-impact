@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,12 +11,17 @@ export function ConfirmDelete({
   prompt = "Delete?",
   size = "icon",
   className,
+  icon,
+  overlay = false,
 }: {
   onConfirm: () => void;
   label: string;
   prompt?: string;
-  size?: "icon" | "icon-xs";
+  size?: "icon" | "icon-xs" | "icon-sm";
   className?: string;
+  icon?: ReactNode;
+  /** Float the Yes/No chip over the row so a narrow cell does not reflow. */
+  overlay?: boolean;
 }) {
   const [armed, setArmed] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -49,7 +54,7 @@ export function ConfirmDelete({
         onClick={() => setArmed(true)}
         aria-label={label}
       >
-        <Trash2 />
+        {icon ?? <Trash2 />}
       </Button>
     );
   }
@@ -59,7 +64,10 @@ export function ConfirmDelete({
       ref={rootRef}
       role="group"
       aria-label={label}
-      className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-md border bg-background px-1 py-0.5 text-[11px] leading-none shadow-sm"
+      className={cn(
+        "inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-md border bg-background px-1 py-0.5 text-[11px] leading-none shadow-sm",
+        overlay && "absolute top-1/2 right-0 z-20 -translate-y-1/2",
+      )}
     >
       <span className="px-0.5 text-muted-foreground">{prompt}</span>
       <button

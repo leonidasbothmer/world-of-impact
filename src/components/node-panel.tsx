@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Link2, Loader2, Locate, Pencil, Pin, Share2, X } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Briefcase,
+  Check,
+  Link2,
+  Loader2,
+  Locate,
+  Pencil,
+  Pin,
+  Share2,
+  X,
+} from "lucide-react";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LocationSuggestInput } from "@/components/location-suggest-input";
 import { appendLocation, collectLocations, normalizeLocation } from "@/lib/locations";
-import { TRACKED_TAG, isTracked, visibleTags } from "@/lib/tracking";
+import { isTracked, trackerTags, visibleTags } from "@/lib/tracking";
 import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
 import { cn } from "@/lib/utils";
 import type { MindMapData, MindMapNode, NodeType } from "@/types/mindmap";
@@ -33,9 +44,11 @@ type NodePanelProps = {
   onToggleFocusRoot?: () => void;
   onSave: (node: MindMapNode) => void | Promise<void>;
   onLocate?: () => void;
+  onSetTracked?: (tracked: boolean) => void;
   onDelete: (id: string) => void;
   onAddEdge: (source: string, target: string, label?: string) => void;
   onDeleteEdge: (id: string) => void;
+  onReverseEdge: (id: string) => void;
 };
 
 const TEXT_FIELDS = [
@@ -79,6 +92,17 @@ function isPanelDirty(
   return false;
 }
 
+export function isOrgSolutionPair(
+  a: { type: NodeType } | undefined,
+  b: { type: NodeType } | undefined,
+) {
+  if (!a || !b) return false;
+  return (
+    (a.type === "organization" && b.type === "solution") ||
+    (a.type === "solution" && b.type === "organization")
+  );
+}
+
 function emptyDraft(): MindMapNode {
   return {
     id: "",
@@ -98,9 +122,11 @@ export function NodePanel({
   onToggleFocusRoot,
   onSave,
   onLocate,
+  onSetTracked,
   onDelete,
   onAddEdge,
   onDeleteEdge,
+  onReverseEdge,
 }: NodePanelProps) {
   const [draft, setDraft] = useState<MindMapNode>(emptyDraft());
   const [tagsInput, setTagsInput] = useState("");
@@ -193,8 +219,7 @@ export function NodePanel({
     const name = typeof nameOverride === "string" ? nameOverride : draft.name;
     const trimmed = name.trim();
     if (!trimmed) return;
-    const tags = splitTags(tagsInput);
-    if (isTracked(node)) tags.push(TRACKED_TAG);
+    const tags = [...splitTags(tagsInput), ...trackerTags(node.tags)];
     const locations = locationsWithPending(draft.locations, locationDraft);
     const next: MindMapNode = {
       ...draft,
@@ -322,6 +347,31 @@ export function NodePanel({
                   >
                     {linkCopied ? <Check /> : <Share2 />}
                   </Button>
+                  {node.type === "organization" && onSetTracked ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={
+                        isTracked(node)
+                          ? "Remove from job tracker"
+                          : "Add to job tracker"
+                      }
+                      aria-pressed={isTracked(node)}
+                      title={
+                        isTracked(node)
+                          ? "Remove from job tracker"
+                          : "Add to job tracker"
+                      }
+                      className={cn(
+                        "text-muted-foreground",
+                        isTracked(node) && "text-foreground",
+                      )}
+                      onClick={() => onSetTracked(!isTracked(node))}
+                    >
+                      <Briefcase className={cn(isTracked(node) && "fill-current")} />
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"
@@ -614,13 +664,27 @@ export function NodePanel({
                         <span className="text-muted-foreground"> ({edge.label})</span>
                       )}
                     </span>
-                    <ConfirmDelete
-                      label="Remove relationship"
-                      prompt="Remove?"
-                      size="icon-xs"
-                      className="text-muted-foreground hover:text-destructive"
-                      onConfirm={() => onDeleteEdge(edge.id)}
-                    />
+                    <span className="flex shrink-0 items-center">
+                      {isOrgSolutionPair(node, other) ? null : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-muted-foreground"
+                          aria-label="Reverse relationship"
+                          onClick={() => onReverseEdge(edge.id)}
+                        >
+                          <ArrowRightLeft />
+                        </Button>
+                      )}
+                      <ConfirmDelete
+                        label="Remove relationship"
+                        prompt="Remove?"
+                        size="icon-xs"
+                        className="text-muted-foreground hover:text-destructive"
+                        onConfirm={() => onDeleteEdge(edge.id)}
+                      />
+                    </span>
                   </li>
                 );
               })}

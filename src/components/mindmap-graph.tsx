@@ -10,6 +10,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useViewport,
   type Node,
   type Edge,
   type OnConnect,
@@ -74,11 +75,16 @@ export type NodeFocusRequest = {
   token: number;
 };
 
+export type HomeRequest = {
+  token: number;
+};
+
 type MindMapGraphProps = {
   data: MindMapData;
   hiddenTypes: ReadonlySet<NodeType>;
   selectedNodeId: string | null;
   focusRequest?: NodeFocusRequest | null;
+  homeRequest?: HomeRequest | null;
   onSelectNode: (id: string | null) => void;
   onGraphChange: (change: MindMapGraphChange) => void;
   /** When set, only these node ids (plus always-visible selection) stay on the canvas. */
@@ -329,6 +335,7 @@ function MindMapGraphInner({
   hiddenTypes,
   selectedNodeId,
   focusRequest = null,
+  homeRequest = null,
   onSelectNode,
   onGraphChange,
   focusFilterIds = null,
@@ -421,15 +428,46 @@ function MindMapGraphInner({
   const framingRef = useRef(false);
   const frameGraph = useCallback(
     (maxZoom: number, duration: number) => {
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      // A 0×0 pane and unmeasured nodes make fitView divide 0/0 and store NaN.
+      const measured = nodesRef.current.some(
+        (node) =>
+          (node.measured?.width ?? 0) > 0 &&
+          (node.measured?.height ?? 0) > 0 &&
+          Number.isFinite(node.position.x) &&
+          Number.isFinite(node.position.y),
+      );
+      if (!rect || rect.width < 8 || rect.height < 8 || !measured) return false;
       framingRef.current = true;
       void fitView({ padding: 0.18, duration, maxZoom }).finally(() => {
         window.setTimeout(() => {
           framingRef.current = false;
         }, 50);
       });
+      return true;
     },
     [fitView],
   );
+  const frameGraphRef = useRef(frameGraph);
+  frameGraphRef.current = frameGraph;
+  const cancelSettleFrame = useRef<(() => void) | null>(null);
+  const scheduleFrame = useCallback((maxZoom: number, duration: number) => {
+    let attempts = 0;
+    let raf = 0;
+    const tick = () => {
+      if (frameGraphRef.current(maxZoom, duration)) return;
+      if (attempts >= 60) return;
+      attempts += 1;
+      raf = requestAnimationFrame(tick);
+    };
+    const timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(tick);
+    }, 40);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
 
   const force = useForceLayout({
     data,
@@ -438,7 +476,8 @@ function MindMapGraphInner({
       persistPositions(positions);
       if (didFitRef.current || userMovedRef.current) return;
       didFitRef.current = true;
-      window.setTimeout(() => frameGraph(1.1, 450), 60);
+      cancelSettleFrame.current?.();
+      cancelSettleFrame.current = scheduleFrame(1.1, 450);
     },
   });
 
@@ -453,10 +492,14 @@ function MindMapGraphInner({
   // Saved positions sit around the origin, which the default camera misses.
   // Cap the first frame so a too-early fit cannot zoom into the core and
   // clip the rim; the simulation's settle frames the final bounds.
+  // Wait until the pane and nodes have size — fitting earlier yields NaN.
   useEffect(() => {
-    const timer = window.setTimeout(() => frameGraph(0.8, 0), 120);
-    return () => window.clearTimeout(timer);
-  }, [frameGraph]);
+    const cancel = scheduleFrame(0.8, 0);
+    return () => {
+      cancel();
+      cancelSettleFrame.current?.();
+    };
+  }, [scheduleFrame]);
 
   function cancelOrbitMotion() {
     motionGenRef.current += 1;
@@ -511,13 +554,16 @@ function MindMapGraphInner({
       maxY = Math.max(maxY, pos.y + height);
     }
     const rect = wrapperRef.current?.getBoundingClientRect();
-    if (!rect || !Number.isFinite(minX)) return;
+    if (!rect || rect.width < 8 || rect.height < 8 || !Number.isFinite(minX)) return;
     const pad = 0.2;
     const zoom = Math.min(
       1.2,
       (rect.width * (1 - pad * 2)) / Math.max(1, maxX - minX),
       (rect.height * (1 - pad * 2)) / Math.max(1, maxY - minY),
     );
+    if (!Number.isFinite(zoom) || !Number.isFinite(origin.x) || !Number.isFinite(origin.y)) {
+      return;
+    }
     framingRef.current = true;
     void setCenter(origin.x, origin.y, {
       zoom: Math.max(0.2, zoom),
@@ -699,6 +745,18 @@ function MindMapGraphInner({
         if (!cancelled) force.resume();
       });
       if (pending.viewport) {
+        const rect = wrapperRef.current?.getBoundingClientRect();
+        const { x, y, zoom } = pending.viewport;
+        if (
+          !rect ||
+          rect.width < 8 ||
+          rect.height < 8 ||
+          !Number.isFinite(x) ||
+          !Number.isFinite(y) ||
+          !Number.isFinite(zoom)
+        ) {
+          return;
+        }
         framingRef.current = true;
         void setViewport(pending.viewport, { duration: ORBIT_MS }).finally(() => {
           window.setTimeout(() => {
@@ -942,19 +1000,57 @@ function MindMapGraphInner({
     onSelectNode(null);
   }, [draft, leaveOrbit, onSelectNode]);
 
+  const leaveOrbitRef = useRef(leaveOrbit);
+  leaveOrbitRef.current = leaveOrbit;
+
+  useEffect(() => {
+    if (!homeRequest) return;
+    setDraft(null);
+    setSelectedEdgeId(null);
+    setEditingEdgeId(null);
+    if (orbitIdRef.current || orbitingRef.current) {
+      leaveOrbitRef.current({ restoreView: false, animate: false });
+    }
+    return scheduleFrame(1.1, 450);
+  }, [homeRequest, scheduleFrame]);
+
   useEffect(() => {
     if (!focusRequest) return;
     if (orbitIdRef.current) leaveOrbit({ restoreView: false, animate: false });
     const id = focusRequest.id;
-    const timer = window.setTimeout(() => {
+    let attempts = 0;
+    let raf = 0;
+    const tick = () => {
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      const node = nodesRef.current.find((item) => item.id === id);
+      const ready =
+        rect &&
+        rect.width >= 8 &&
+        rect.height >= 8 &&
+        (node?.measured?.width ?? 0) > 0 &&
+        (node?.measured?.height ?? 0) > 0 &&
+        Number.isFinite(node?.position.x) &&
+        Number.isFinite(node?.position.y);
+      if (!ready && attempts < 60) {
+        attempts += 1;
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      if (!ready) return;
       void fitView({
         nodes: [{ id }],
         duration: 450,
         padding: 0.4,
         maxZoom: 1.5,
       });
-    }, 50);
-    return () => window.clearTimeout(timer);
+    };
+    const timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(tick);
+    }, 40);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
   }, [focusRequest, fitView, leaveOrbit]);
 
   useEffect(() => {
@@ -1025,7 +1121,7 @@ function MindMapGraphInner({
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background gap={20} size={1} />
+        <DottedBackground />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(n) => {
@@ -1059,6 +1155,8 @@ function MindMapGraphInner({
             setDraft(null);
             onSelectNode(id);
             window.setTimeout(() => {
+              const rect = wrapperRef.current?.getBoundingClientRect();
+              if (!rect || rect.width < 8 || rect.height < 8) return;
               void fitView({
                 nodes: [{ id }],
                 duration: 450,
@@ -1072,6 +1170,25 @@ function MindMapGraphInner({
       ) : null}
     </div>
   );
+}
+
+function DottedBackground() {
+  const { x, y, zoom } = useViewport();
+  const { setViewport } = useReactFlow();
+  const finite =
+    Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(zoom) && zoom > 0;
+  const repaired = useRef(false);
+  useEffect(() => {
+    if (finite) {
+      repaired.current = false;
+      return;
+    }
+    if (repaired.current) return;
+    repaired.current = true;
+    void setViewport({ x: 0, y: 0, zoom: 1 });
+  }, [finite, setViewport]);
+  if (!finite) return null;
+  return <Background gap={20} size={1} />;
 }
 
 export function MindMapGraph(props: MindMapGraphProps) {

@@ -1,21 +1,29 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Hanken_Grotesk, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
 });
 
+const libreBaskerville = Libre_Baskerville({
+  variable: "--font-libre-baskerville",
+  subsets: ["latin"],
+  style: "italic",
+});
+
 export const metadata: Metadata = {
-  title: "Atlas of Social Progress",
-  description:
-    "An atlas of work aimed at social progress — problems, organizations, and people.",
+  title: "The Berlin Atlas for Social Progress",
+  description: "Finding Purpose in Tech.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${hanken.variable} ${libreBaskerville.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
         {children}
       </body>

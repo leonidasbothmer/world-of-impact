@@ -7,10 +7,11 @@ import { focusNeighborhoodIds } from "@/lib/focus-neighborhood";
 import { ReactFlowProvider } from "@xyflow/react";
 import {
   MindMapGraph,
+  type HomeRequest,
   type NodeFocusRequest,
 } from "@/components/mindmap-graph";
 import { NodeSearch, type SearchCreateInput } from "@/components/node-search";
-import { NodePanel } from "@/components/node-panel";
+import { isOrgSolutionPair, NodePanel } from "@/components/node-panel";
 import { JobTracker } from "@/components/job-tracker";
 import { OrgTable } from "@/components/org-table";
 import { AddNodeForm } from "@/components/add-node-form";
@@ -30,7 +31,14 @@ import {
   loadHiddenTypes,
   saveHiddenTypes,
 } from "@/lib/visible-nodes";
-import { withTracked } from "@/lib/tracking";
+import {
+  withArchived,
+  withTrackDate,
+  withTrackRole,
+  withTrackStatus,
+  withTracked,
+  type TrackStatus,
+} from "@/lib/tracking";
 import { cn } from "@/lib/utils";
 import { fetchMindMap, patchMindMap } from "@/lib/mindmap-client";
 import type {
@@ -64,7 +72,9 @@ export function MindMapApp({
   const [focusRequest, setFocusRequest] = useState<NodeFocusRequest | null>(
     null,
   );
+  const [homeRequest, setHomeRequest] = useState<HomeRequest | null>(null);
   const focusTokenRef = useRef(0);
+  const homeTokenRef = useRef(0);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -372,13 +382,11 @@ export function MindMapApp({
     );
   }
 
-  function handleSetTracked(id: string, tracked: boolean) {
+  function commitTrackedNode(id: string, nextNode: MindMapNode) {
     const current = dataRef.current;
     if (!current) return;
     const node = current.nodes.find((item) => item.id === id);
-    if (!node || node.type !== "organization") return;
-    const nextNode = withTracked(node, tracked);
-    if ((nextNode.tags ?? []).join("\0") === (node.tags ?? []).join("\0")) {
+    if (!node || (nextNode.tags ?? []).join("\0") === (node.tags ?? []).join("\0")) {
       return;
     }
     commit(
@@ -390,6 +398,40 @@ export function MindMapApp({
       },
       { immediate: true, action: { action: "updateNode", node: nextNode } },
     );
+  }
+
+  function handleSetTracked(id: string, tracked: boolean) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return;
+    commitTrackedNode(id, withTracked(node, tracked));
+  }
+
+  function handleSetTrackStatus(id: string, status: TrackStatus) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return;
+    commitTrackedNode(id, withTrackStatus(node, status));
+  }
+
+  function handleSetArchived(id: string, archived: boolean) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return;
+    commitTrackedNode(id, withArchived(node, archived));
+  }
+
+  function handleSetTrackDate(
+    id: string,
+    field: "appliedOn" | "updatedOn",
+    value: string,
+  ) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return;
+    commitTrackedNode(id, withTrackDate(node, field, value));
+  }
+
+  function handleSetTrackRole(id: string, role: string) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return;
+    commitTrackedNode(id, withTrackRole(node, role));
   }
 
   function handlePatchPerson(
@@ -597,6 +639,35 @@ export function MindMapApp({
     );
   }
 
+  function handleReverseEdge(id: string) {
+    const current = dataRef.current;
+    if (!current) return;
+    const existing = current.edges.find((edge) => edge.id === id);
+    if (!existing) return;
+    const sourceNode = current.nodes.find((node) => node.id === existing.source);
+    const targetNode = current.nodes.find((node) => node.id === existing.target);
+    if (isOrgSolutionPair(sourceNode, targetNode)) return;
+    const reversed = {
+      ...existing,
+      source: existing.target,
+      target: existing.source,
+    };
+    const duplicate = current.edges.some(
+      (edge) =>
+        edge.id !== id &&
+        edge.source === reversed.source &&
+        edge.target === reversed.target,
+    );
+    if (duplicate) return;
+    commit(
+      {
+        ...current,
+        edges: current.edges.map((edge) => (edge.id === id ? reversed : edge)),
+      },
+      { immediate: true, action: { action: "updateEdge", edge: reversed } },
+    );
+  }
+
   const handleGraphChange = useCallback(
     (change: MindMapGraphChange) => {
       const current = dataRef.current;
@@ -737,6 +808,19 @@ export function MindMapApp({
     [commit],
   );
 
+  function returnHome() {
+    homeTokenRef.current += 1;
+    setSelectedNodeId(null);
+    setView("graph");
+    setHomeRequest({ token: homeTokenRef.current });
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("node")) {
+      url.searchParams.delete("node");
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(null, "", next);
+    }
+  }
+
   function handleSearchSelect(id: string) {
     focusTokenRef.current += 1;
     setSelectedNodeId(id);
@@ -788,14 +872,20 @@ export function MindMapApp({
   return (
     <div className="flex h-full flex-col">
       <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 md:px-4 md:py-3">
-        <div className="min-w-0">
-          <h1 className="text-base font-semibold truncate md:text-lg">
-            Atlas of Social Progress
+        <button
+          type="button"
+          onClick={returnHome}
+          title="Back to the graph"
+          className="min-w-0 cursor-pointer rounded-md text-left hover:opacity-80"
+        >
+          <h1 className="text-base font-semibold leading-tight md:text-lg">
+            The <em className="font-serif font-normal italic">Berlin</em> Atlas
+            for Social Progress
           </h1>
-          <p className="text-xs text-muted-foreground hidden sm:block">
-            Problems, organizations, and people · Leonidas Bothmer
+          <p className="text-sm leading-tight">
+            Finding Purpose <em className="font-serif italic">in Tech</em>.
           </p>
-        </div>
+        </button>
 
         <NodeSearch
           nodes={data.nodes}
@@ -1023,6 +1113,7 @@ export function MindMapApp({
               hiddenTypes={hiddenTypeSet}
               selectedNodeId={selectedNodeId}
               focusRequest={focusRequest}
+              homeRequest={homeRequest}
               focusFilterIds={focusFilterIds}
               onSelectNode={setSelectedNodeId}
               onGraphChange={handleGraphChange}
@@ -1048,9 +1139,14 @@ export function MindMapApp({
           <div className="flex min-h-0 flex-1 flex-col">
             <JobTracker
               nodes={data.nodes}
+              edges={data.edges}
               selectedNodeId={selectedNodeId}
               onOpenOnGraph={handleSearchSelect}
               onSetTracked={canEdit ? handleSetTracked : () => undefined}
+              onSetStatus={canEdit ? handleSetTrackStatus : () => undefined}
+              onSetArchived={canEdit ? handleSetArchived : () => undefined}
+              onSetRole={canEdit ? handleSetTrackRole : () => undefined}
+              onSetDate={canEdit ? handleSetTrackDate : () => undefined}
               onPatchLink={canEdit ? handlePatchPerson : () => undefined}
             />
           </div>
@@ -1072,9 +1168,15 @@ export function MindMapApp({
               }
               onSave={handleSaveNode}
               onLocate={() => handleLocateNode(selectedNode.id)}
+              onSetTracked={
+                canEdit
+                  ? (tracked) => handleSetTracked(selectedNode.id, tracked)
+                  : undefined
+              }
               onDelete={handleDeleteNode}
               onAddEdge={handleAddEdge}
               onDeleteEdge={handleDeleteEdge}
+              onReverseEdge={handleReverseEdge}
             />
           </aside>
         ) : null}

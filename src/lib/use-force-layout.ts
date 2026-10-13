@@ -592,13 +592,16 @@ export function useForceLayout({
           );
           return current.map((flowNode) => {
             const simNode = nodesByIdRef.current.get(flowNode.id);
-            if (!simNode || simNode.x == null || simNode.y == null) return flowNode;
-            if (flowNode.position.x === simNode.x && flowNode.position.y === simNode.y) {
+            const x = simNode?.x;
+            const y = simNode?.y;
+            if (typeof x !== "number" || typeof y !== "number") return flowNode;
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return flowNode;
+            if (flowNode.position.x === x && flowNode.position.y === y) {
               return flowNode;
             }
             return {
               ...flowNode,
-              position: { x: simNode.x, y: simNode.y },
+              position: { x, y },
             };
           });
         });
@@ -607,8 +610,11 @@ export function useForceLayout({
       simulation.on("end", () => {
         const positions: Record<string, { x: number; y: number }> = {};
         for (const n of nodesByIdRef.current.values()) {
-          if (n.x == null || n.y == null) continue;
-          positions[n.id] = { x: n.x, y: n.y };
+          const x = n.x;
+          const y = n.y;
+          if (typeof x !== "number" || typeof y !== "number") continue;
+          if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+          positions[n.id] = { x, y };
         }
         onSettledRef.current?.(positions);
       });

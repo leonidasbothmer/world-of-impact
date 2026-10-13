@@ -116,6 +116,124 @@ async function upsertPrivateNode(db: Db, userId: string, node: MindMapNode) {
   if (error) throw error;
 }
 
+/** Edges in either table that have this node as an endpoint. */
+async function edgesTouching(
+  db: Db,
+  table: "shared_edges" | "private_edges",
+  nodeId: string,
+  userId?: string,
+): Promise<Array<SharedEdgeRow | PrivateEdgeRow>> {
+  let query = db
+    .from(table)
+    .select("*")
+    .or(`source.eq.${nodeId},target.eq.${nodeId}`);
+  if (userId) query = query.eq("user_id", userId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as Array<SharedEdgeRow | PrivateEdgeRow>;
+}
+
+/**
+ * A person lives only in private_nodes. Drop the shared copy and move its
+ * edges over first — deleting the shared node cascades shared_edges.
+ */
+async function retireSharedCopy(
+  db: Db,
+  userId: string,
+  nodeId: string,
+): Promise<SharedEdgeRow[]> {
+  const edges = (await edgesTouching(db, "shared_edges", nodeId)) as SharedEdgeRow[];
+  if (edges.length > 0) {
+    const { error: upsertError } = await db.from("private_edges").upsert(
+      edges.map((edge) => ({
+        user_id: userId,
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        updated_at: new Date().toISOString(),
+      })),
+    );
+    if (upsertError) throw upsertError;
+    const { error: deleteEdgesError } = await db
+      .from("shared_edges")
+      .delete()
+      .in(
+        "id",
+        edges.map((edge) => edge.id),
+      );
+    if (deleteEdgesError) throw deleteEdgesError;
+  }
+
+  const { error: deleteNodeError } = await db
+    .from("shared_nodes")
+    .delete()
+    .eq("id", nodeId);
+  if (deleteNodeError) throw deleteNodeError;
+
+  const { error: deleteNotesError } = await db
+    .from("private_notes")
+    .delete()
+    .eq("user_id", userId)
+    .eq("shared_node_id", nodeId);
+  if (deleteNotesError) throw deleteNotesError;
+
+  return edges;
+}
+
+/**
+ * A non-person lives only in shared_nodes. Edges that still touch some other
+ * person stay private; the rest move back to the shared graph.
+ */
+async function retirePrivateCopy(db: Db, userId: string, nodeId: string) {
+  const { data: people, error: peopleError } = await db
+    .from("private_nodes")
+    .select("id")
+    .eq("user_id", userId)
+    .neq("id", nodeId);
+  if (peopleError) throw peopleError;
+  const otherPeople = new Set((people ?? []).map((row) => row.id as string));
+
+  const edges = (await edgesTouching(
+    db,
+    "private_edges",
+    nodeId,
+    userId,
+  )) as PrivateEdgeRow[];
+  const movable = edges.filter((edge) => {
+    const other = edge.source === nodeId ? edge.target : edge.source;
+    return !otherPeople.has(other);
+  });
+  if (movable.length > 0) {
+    const { error: upsertError } = await db.from("shared_edges").upsert(
+      movable.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        updated_at: new Date().toISOString(),
+      })),
+    );
+    if (upsertError) throw upsertError;
+    const { error: deleteError } = await db
+      .from("private_edges")
+      .delete()
+      .eq("user_id", userId)
+      .in(
+        "id",
+        movable.map((edge) => edge.id),
+      );
+    if (deleteError) throw deleteError;
+  }
+
+  const { error: deleteNodeError } = await db
+    .from("private_nodes")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", nodeId);
+  if (deleteNodeError) throw deleteNodeError;
+}
+
 async function writeNode(
   db: Db,
   userId: string,
@@ -124,8 +242,10 @@ async function writeNode(
 ) {
   if (isPrivateNode(node)) {
     await upsertPrivateNode(db, userId, node);
+    await retireSharedCopy(db, userId, node.id);
   } else {
     await upsertSharedNode(db, userId, node);
+    await retirePrivateCopy(db, userId, node.id);
   }
   const contact = extractContactDetails(node);
   if (contact) {
@@ -242,13 +362,35 @@ export async function readMindMapFromSupabase(
       privateNodeToMindMap(row, layouts.get(row.id), contacts.get(row.id)),
   );
 
+  // A type change to person used to insert a private row and leave the shared
+  // row in place, so the same id came back twice and the graph kept the old type.
+  const privateIds = new Set(privateNodes.map((node) => node.id));
+  const movedEdges: SharedEdgeRow[] = [];
+  if (userId) {
+    for (const node of sharedNodes) {
+      if (!privateIds.has(node.id)) continue;
+      movedEdges.push(...(await retireSharedCopy(db, userId, node.id)));
+    }
+  }
+  const movedEdgeIds = new Set(movedEdges.map((edge) => edge.id));
+  const privateEdgeRows = (privateEdgesRes.data ?? []) as PrivateEdgeRow[];
+  const privateEdgeIds = new Set(privateEdgeRows.map((edge) => edge.id));
+
   const edges = [
-    ...((sharedEdgesRes.data ?? []) as SharedEdgeRow[]).map(edgeRowToMindMap),
-    ...((privateEdgesRes.data ?? []) as PrivateEdgeRow[]).map(edgeRowToMindMap),
+    ...((sharedEdgesRes.data ?? []) as SharedEdgeRow[])
+      .filter((edge) => !movedEdgeIds.has(edge.id))
+      .map(edgeRowToMindMap),
+    ...privateEdgeRows.map(edgeRowToMindMap),
+    ...movedEdges
+      .filter((edge) => !privateEdgeIds.has(edge.id))
+      .map(edgeRowToMindMap),
   ];
 
   return {
-    nodes: [...sharedNodes, ...privateNodes],
+    nodes: [
+      ...sharedNodes.filter((node) => !privateIds.has(node.id)),
+      ...privateNodes,
+    ],
     edges,
     revision: metaRes.data?.revision ?? 0,
     updatedAt: metaRes.data?.updated_at,
@@ -339,23 +481,23 @@ async function applyOneAction(
     }
     case "updateEdge": {
       const people = personIds();
+      const patch = {
+        source: action.edge.source,
+        target: action.edge.target,
+        label: action.edge.label ?? null,
+        updated_at: new Date().toISOString(),
+      };
       if (edgeTouchesPerson(action.edge, people)) {
         const { error } = await db
           .from("private_edges")
-          .update({
-            label: action.edge.label ?? null,
-            updated_at: new Date().toISOString(),
-          })
+          .update(patch)
           .eq("user_id", userId)
           .eq("id", action.edge.id);
         if (error) throw error;
       } else {
         const { error } = await db
           .from("shared_edges")
-          .update({
-            label: action.edge.label ?? null,
-            updated_at: new Date().toISOString(),
-          })
+          .update(patch)
           .eq("id", action.edge.id);
         if (error) throw error;
       }

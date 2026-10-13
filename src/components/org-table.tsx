@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, X } from "lucide-react";
+import { SquareArrowOutUpRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocationSuggestInput } from "@/components/location-suggest-input";
+import { describeLink } from "@/lib/link-display";
 import { appendLocation, collectLocations } from "@/lib/locations";
+import { useLinkTitle } from "@/lib/use-link-title";
 import { cn } from "@/lib/utils";
 import type { MindMapNode } from "@/types/mindmap";
 
@@ -36,9 +38,32 @@ type OrgTableProps = {
   onOpenOnGraph: (id: string) => void;
 };
 
-function websiteHref(value: string): string {
-  if (/^https?:\/\//i.test(value)) return value;
-  return `https://${value}`;
+function SiteFavicon({ host, compact }: { host: string; compact?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center justify-center rounded-sm bg-muted font-semibold text-muted-foreground",
+          compact ? "size-3 text-[7px]" : "size-3.5 text-[8px]",
+        )}
+      >
+        {host.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- remote site favicons
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32`}
+      alt=""
+      width={compact ? 12 : 14}
+      height={compact ? 12 : 14}
+      className={cn("shrink-0 rounded-sm", compact ? "size-3" : "size-3.5")}
+      draggable={false}
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export function OrgTable({
@@ -267,6 +292,7 @@ export function TextCell({
   field,
   placeholder,
   link,
+  compact = false,
   onCommit,
 }: {
   value: string;
@@ -275,68 +301,117 @@ export function TextCell({
   field: string;
   placeholder: string;
   link?: boolean;
+  compact?: boolean;
   onCommit: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
-  const focused = useRef(false);
+  const [editing, setEditing] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [seenValue, setSeenValue] = useState(value);
   const skipCommit = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const commitRef = useRef(onCommit);
-  const savedRef = useRef(value);
-  commitRef.current = onCommit;
-  savedRef.current = value;
+
+  if (value !== seenValue) {
+    setSeenValue(value);
+    if (!focused) setDraft(value);
+  }
+
+  const presentation = link ? describeLink(value) : null;
+  const showPretty = Boolean(presentation) && !editing;
+  const fetchedTitle = useLinkTitle(
+    showPretty && presentation && !presentation.linkedIn ? presentation.href : null,
+  );
+  const linkLabel = fetchedTitle || presentation?.label || "";
 
   useEffect(() => {
-    if (!focused.current) setDraft(value);
-  }, [value]);
-
-  useEffect(() => {
+    if (!editing) return;
     const element = inputRef.current;
     if (!element) return;
-    const field = element;
-    function onFocus() {
-      focused.current = true;
-    }
-    function onBlur() {
-      focused.current = false;
-      if (skipCommit.current) {
-        skipCommit.current = false;
-        return;
-      }
-      const next = field.value.trim();
-      if (next !== savedRef.current.trim()) commitRef.current(next);
-    }
-    element.addEventListener("focus", onFocus);
-    element.addEventListener("blur", onBlur);
-    return () => {
-      element.removeEventListener("focus", onFocus);
-      element.removeEventListener("blur", onBlur);
-    };
-  }, []);
+    element.focus();
+    element.select();
+  }, [editing]);
+
+  function commit(raw: string) {
+    const next = raw.trim();
+    if (next !== value.trim()) onCommit(next);
+  }
+
+  function focusNext(row: HTMLTableRowElement | null) {
+    const next = row?.nextElementSibling?.querySelector(`[data-field="${field}"]`);
+    if (next instanceof HTMLButtonElement) next.click();
+    else if (next instanceof HTMLInputElement) next.focus();
+  }
 
   return (
     <td className="px-2 py-1">
-      <div className="flex items-center gap-1">
+      {showPretty && presentation ? (
+        <span className="inline-flex min-w-0 max-w-full items-center">
+          <button
+            type="button"
+            data-field={field}
+            title={value}
+            aria-label={`Edit ${label} for ${name}`}
+            className={cn(
+              "flex min-w-0 cursor-text items-center rounded-md pl-1 text-left hover:bg-muted/60",
+              compact ? "h-6 gap-1 text-xs" : "h-7 gap-1.5 text-sm",
+            )}
+            onClick={() => {
+              setFocused(true);
+              setEditing(true);
+            }}
+          >
+            <SiteFavicon host={presentation.host} compact={compact} />
+            <span className={cn("min-w-0 max-w-44 truncate", compact ? "text-xs" : "text-sm")}>
+              {linkLabel}
+            </span>
+          </button>
+          <a
+            href={presentation.href}
+            target="_blank"
+            rel="noreferrer"
+            tabIndex={-1}
+            aria-label={`Open ${label} for ${name}`}
+            title="Open link"
+            className={cn(
+              "inline-flex shrink-0 items-center justify-center text-muted-foreground hover:text-foreground",
+              compact ? "size-5" : "size-6",
+            )}
+          >
+            <SquareArrowOutUpRight className={compact ? "size-3" : "size-3.5"} />
+          </a>
+        </span>
+      ) : (
         <input
           ref={inputRef}
           data-field={field}
           value={draft}
           aria-label={`${label} for ${name}`}
           placeholder={placeholder}
-          className="h-7 min-w-28 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground focus:bg-muted/50"
+          className={cn(
+            "w-full min-w-28 bg-transparent px-1 outline-none placeholder:text-muted-foreground focus:bg-muted/50",
+            compact ? "h-6 text-xs" : "h-7 text-sm",
+          )}
           onChange={(event) => setDraft(event.target.value)}
           onFocus={() => {
-            focused.current = true;
+            setFocused(true);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            if (skipCommit.current) {
+              skipCommit.current = false;
+              setDraft(value);
+              setEditing(false);
+              return;
+            }
+            commit(event.currentTarget.value);
+            setEditing(false);
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
               const row = event.currentTarget.closest("tr");
-              const next = row?.nextElementSibling?.querySelector(
-                `input[data-field="${field}"]`,
-              );
               event.currentTarget.blur();
-              if (next instanceof HTMLInputElement) next.focus();
+              focusNext(row);
               return;
             }
             if (event.key === "Escape") {
@@ -346,19 +421,7 @@ export function TextCell({
             }
           }}
         />
-        {link && value ? (
-          <a
-            href={field === "orgEmail" ? `mailto:${value}` : websiteHref(value)}
-            target="_blank"
-            rel="noreferrer"
-            tabIndex={-1}
-            aria-label={`Open ${label} for ${name}`}
-            className="shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            <ExternalLink className="size-3" />
-          </a>
-        ) : null}
-      </div>
+      )}
     </td>
   );
 }

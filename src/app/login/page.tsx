@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,12 @@ export default function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">Atlas of Social Progress</h1>
+          <h1 className="text-xl font-semibold">
+            <Link href="/" className="hover:opacity-80">
+              The <em className="font-serif font-normal italic">Berlin</em> Atlas
+              for Social Progress
+            </Link>
+          </h1>
           <p className="text-sm text-muted-foreground">
             Sign in with email and password to edit the shared graph. Your
             contacts stay private to your account.
