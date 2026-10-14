@@ -50,7 +50,14 @@ import {
   type OrbitNodeBox,
   type OrbitPoint,
 } from "@/lib/orbit-layout";
+import {
+  problemFlowMemberIds,
+  problemFlowPositions,
+  type FlowColumnLabel,
+} from "@/lib/problem-flow";
+import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
 import { visibleNodeIds } from "@/lib/visible-nodes";
+import { cn } from "@/lib/utils";
 import type {
   MindMapData,
   MindMapGraphChange,
@@ -188,11 +195,13 @@ function toFlowNodes(
   neighbors: Set<string>,
   onUnpin?: (id: string) => void,
   endpoints?: ReadonlySet<string>,
+  revealAll = false,
 ): Node[] {
-  const edgeFocused = Boolean(endpoints && endpoints.size > 0);
+  const edgeFocused = !revealAll && Boolean(endpoints && endpoints.size > 0);
+  const focusId = revealAll ? null : selectedId;
   return nodes.map((node) => {
     const selected = node.id === selectedId;
-    const highlight = nodeHighlight(node.id, selectedId, neighbors, endpoints);
+    const highlight = nodeHighlight(node.id, focusId, neighbors, endpoints);
     return {
       id: node.id,
       type: "mindmap",
@@ -200,7 +209,7 @@ function toFlowNodes(
       data: { node, onUnpin, highlight },
       selected,
       zIndex: canvasZIndex(node.type, selected, highlight),
-      style: nodeFocusStyle(selectedId, node.id, highlight, edgeFocused, node.type),
+      style: nodeFocusStyle(focusId, node.id, highlight, edgeFocused, node.type),
     };
   });
 }
@@ -210,15 +219,17 @@ function toFlowEdges(
   nodes: MindMapNode[],
   selectedId: string | null,
   selectedEdgeId: string | null = null,
+  revealAll = false,
 ): Edge[] {
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
-  const focused = Boolean(selectedId) || Boolean(selectedEdgeId);
+  const focusId = revealAll ? null : selectedId;
+  const focused = !revealAll && (Boolean(selectedId) || Boolean(selectedEdgeId));
   return edges.map((edge) => {
     const social = isPersonPersonEdge(edge, byId);
     const selected = edge.id === selectedEdgeId;
     const highlight = selected
       ? undefined
-      : edgeHighlight(edge.source, edge.target, selectedId);
+      : edgeHighlight(edge.source, edge.target, focusId);
     return {
       id: edge.id,
       source: edge.source,
@@ -318,6 +329,27 @@ function shownGraph(data: MindMapData, visibleIds: Set<string>) {
 
 const ORBIT_MS = 650;
 
+type FocalLens = "network" | "problem-flow";
+
+function boundsCenter(targets: Map<string, OrbitPoint>, nodes: Node[]): OrbitPoint {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [id, pos] of targets) {
+    const node = byId.get(id);
+    const width = node?.measured?.width || 96;
+    const height = node?.measured?.height || 72;
+    minX = Math.min(minX, pos.x);
+    minY = Math.min(minY, pos.y);
+    maxX = Math.max(maxX, pos.x + width);
+    maxY = Math.max(maxY, pos.y + height);
+  }
+  if (!Number.isFinite(minX)) return { x: 0, y: 0 };
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+}
+
 function nodeBox(node: Node): OrbitNodeBox {
   const width = node.measured?.width || 96;
   const height = node.measured?.height || 48;
@@ -355,7 +387,11 @@ function MindMapGraphInner({
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [orbitId, setOrbitId] = useState<string | null>(null);
   const [orbitEpoch, setOrbitEpoch] = useState(0);
+  const [focalLens, setFocalLens] = useState<FocalLens>("network");
+  const [flowColumns, setFlowColumns] = useState<FlowColumnLabel[]>([]);
   const orbitIdRef = useRef<string | null>(null);
+  const focalLensRef = useRef<FocalLens>("network");
+  focalLensRef.current = focalLens;
   const orbitingRef = useRef(false);
   const viewportBeforeRef = useRef<Viewport | null>(null);
   const restoreRef = useRef<{
@@ -368,7 +404,19 @@ function MindMapGraphInner({
   const pendingFramesRef = useRef<number[]>([]);
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+  const problemFlowIds = useMemo(() => {
+    if (!orbitId) return new Set<string>();
+    return problemFlowMemberIds(data.nodes, data.edges, orbitId);
+  }, [data, orbitId]);
+  const tracesToProblem =
+    orbitId != null &&
+    data.nodes.some(
+      (node) => node.type === "problem" && problemFlowIds.has(node.id),
+    );
   const visibleIds = useMemo(() => {
+    if (orbitId && focalLens === "problem-flow" && tracesToProblem) {
+      return problemFlowIds;
+    }
     if (orbitId) return orbitMemberIds(data.nodes, data.edges, orbitId);
     const byType = visibleNodeIds(
       data.nodes,
@@ -382,8 +430,17 @@ function MindMapGraphInner({
       if (focusFilterIds.has(id) || id === selectedNodeId) next.add(id);
     }
     return next;
-  }, [data, hiddenTypes, selectedNodeId, focusFilterIds, orbitId]);
-  const viewKey = `${flowSignature(data)}|${[...visibleIds].sort().join(",")}|orbit:${orbitId ?? ""}`;
+  }, [
+    data,
+    hiddenTypes,
+    selectedNodeId,
+    focusFilterIds,
+    orbitId,
+    focalLens,
+    problemFlowIds,
+    tracesToProblem,
+  ]);
+  const viewKey = `${flowSignature(data)}|${[...visibleIds].sort().join(",")}|orbit:${orbitId ?? ""}|lens:${focalLens}`;
   const viewKeyRef = useRef("");
   const visibleRef = useRef(visibleIds);
   visibleRef.current = visibleIds;
@@ -394,7 +451,7 @@ function MindMapGraphInner({
 
   const layoutSignature = useCallback(
     (next: MindMapData, ids: Iterable<string>) =>
-      `${flowSignature(next)}|${[...ids].sort().join(",")}|orbit:${orbitIdRef.current ?? ""}`,
+      `${flowSignature(next)}|${[...ids].sort().join(",")}|orbit:${orbitIdRef.current ?? ""}|lens:${focalLensRef.current}`,
     [],
   );
 
@@ -599,7 +656,10 @@ function MindMapGraphInner({
       const restoreView = options?.restoreView !== false;
       const viewport = restoreView ? viewportBeforeRef.current : null;
       orbitIdRef.current = null;
+      focalLensRef.current = "network";
       viewportBeforeRef.current = null;
+      setFocalLens("network");
+      setFlowColumns([]);
       if (options?.animate === false) {
         restoreRef.current = null;
         snapPositionsRef.current = positions;
@@ -638,13 +698,15 @@ function MindMapGraphInner({
     const leavingOrbit = orbitingRef.current && !orbitId;
     orbitingRef.current = orbitId != null;
     const view = shownGraph(data, visibleIds);
+    const revealAll = focalLensRef.current === "problem-flow";
+    const focusId = revealAll ? null : selectedNodeId;
     if (viewKey === viewKeyRef.current) {
       setNodes((current) =>
         current.map((n) => {
           const selected = n.id === selectedNodeId;
           const highlight = nodeHighlight(
             n.id,
-            selectedNodeId,
+            focusId,
             nextNeighbors,
             endpoints,
           );
@@ -656,10 +718,10 @@ function MindMapGraphInner({
             selected,
             zIndex: canvasZIndex(source.type, selected, highlight),
             style: nodeFocusStyle(
-              selectedNodeId,
+              focusId,
               n.id,
               highlight,
-              endpoints.size > 0,
+              !revealAll && endpoints.size > 0,
               source.type,
             ),
             data: {
@@ -679,7 +741,13 @@ function MindMapGraphInner({
         ) {
           return current;
         }
-        return toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId);
+        return toFlowEdges(
+          view.edges,
+          view.nodes,
+          selectedNodeId,
+          edgeId,
+          revealAll,
+        );
       });
       return;
     }
@@ -701,9 +769,18 @@ function MindMapGraphInner({
         const position = positions.get(node.id);
         return position ? { ...node, position } : node;
       });
-      return toFlowNodes(nodes, selectedNodeId, nextNeighbors, unpinNode, endpoints);
+      return toFlowNodes(
+        nodes,
+        selectedNodeId,
+        nextNeighbors,
+        unpinNode,
+        endpoints,
+        revealAll,
+      );
     });
-    setEdges(toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId));
+    setEdges(
+      toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId, revealAll),
+    );
   }, [data, orbitId, selectedEdgeId, selectedNodeId, setNodes, setEdges, unpinNode, viewKey, visibleIds]);
 
   useEffect(() => {
@@ -717,7 +794,12 @@ function MindMapGraphInner({
         want.size > 0 &&
         have.size === want.size &&
         [...want].every((id) => have.has(id));
-      if (!ready && attempt < 8) {
+      const unmeasured =
+        ready &&
+        nodesRef.current.some(
+          (node) => want.has(node.id) && (node.measured?.width ?? 0) <= 0,
+        );
+      if ((!ready && attempt < 8) || (unmeasured && attempt < 16)) {
         const frame = requestAnimationFrame(() => wait(attempt + 1));
         pendingFramesRef.current.push(frame);
         return;
@@ -730,6 +812,26 @@ function MindMapGraphInner({
         if (!hub) return;
         const hubBox = nodeBox(hub);
         const origin = { x: hubBox.x, y: hubBox.y };
+        if (focalLensRef.current === "problem-flow") {
+          const typeById = new Map(
+            dataRef.current.nodes.map((node) => [node.id, node.type]),
+          );
+          const names = new Map(
+            dataRef.current.nodes.map((node) => [node.id, node.name]),
+          );
+          const layout = problemFlowPositions(
+            origin,
+            current.map(nodeBox),
+            typeById,
+            names,
+            centerId,
+          );
+          setFlowColumns(layout.columns);
+          animatePositions(layout.positions);
+          frameRing(boundsCenter(layout.positions, current), layout.positions);
+          return;
+        }
+        setFlowColumns([]);
         const neighbors = current
           .filter((node) => node.id !== centerId)
           .map(nodeBox);
@@ -1122,14 +1224,20 @@ function MindMapGraphInner({
         proOptions={{ hideAttribution: true }}
       >
         <DottedBackground />
-        <Controls showInteractive={false} />
+        {focalLens === "problem-flow" ? (
+          <FlowColumnLabels columns={flowColumns} />
+        ) : null}
+        <Controls
+          showInteractive={false}
+          className={orbitId ? "!mb-14" : undefined}
+        />
         <MiniMap
           nodeColor={(n) => {
             const type = (n.data as { node: MindMapNode }).node?.type as NodeType;
             return type ? MINIMAP_COLORS[type] : "#888";
           }}
           maskColor="rgba(0,0,0,0.08)"
-          className="!bg-background/80"
+          className={orbitId ? "!mb-14 !bg-background/80" : "!bg-background/80"}
         />
       </ReactFlow>
       </EdgeLabelContext.Provider>
@@ -1144,6 +1252,22 @@ function MindMapGraphInner({
           <ArrowLeft className="size-3.5" />
           Back
         </button>
+      ) : null}
+
+      {orbitId ? (
+        <FocalLensBar
+          lens={focalLens}
+          tracesToProblem={tracesToProblem}
+          onChange={(next) => {
+            if (next === "problem-flow" && !tracesToProblem) return;
+            if (focalLensRef.current === next) return;
+            cancelOrbitMotion();
+            focalLensRef.current = next;
+            setFocalLens(next);
+            setFlowColumns([]);
+            setOrbitEpoch((epoch) => epoch + 1);
+          }}
+        />
       ) : null}
 
       {draft ? (
@@ -1168,6 +1292,99 @@ function MindMapGraphInner({
           onCancel={cancelDraft}
         />
       ) : null}
+    </div>
+  );
+}
+
+function FlowColumnLabels({ columns }: { columns: FlowColumnLabel[] }) {
+  const { x, y, zoom } = useViewport();
+  const finite = Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(zoom) && zoom > 0;
+  if (!finite || columns.length === 0) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+      {columns.map((column) => (
+        <div
+          key={column.type}
+          className="absolute text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+          style={{
+            left: column.x * zoom + x,
+            top: column.y * zoom + y - 8,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          {NODE_TYPE_CONFIG[column.type].label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FocalLensBar({
+  lens,
+  tracesToProblem,
+  onChange,
+}: {
+  lens: FocalLens;
+  tracesToProblem: boolean;
+  onChange: (lens: FocalLens) => void;
+}) {
+  const options = [
+    {
+      id: "network" as const,
+      label: "Network",
+      title: "Neighbors around this node",
+      enabled: true,
+    },
+    {
+      id: "problem-flow" as const,
+      label: "Problem flow",
+      title: tracesToProblem
+        ? "Problem, solution, organization, then person — traced back to the problem"
+        : "Only useful when this node traces back to a problem",
+      enabled: tracesToProblem,
+    },
+  ];
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+      <div
+        className="pointer-events-auto inline-flex items-center gap-0.5 rounded-full border bg-background/95 p-1 shadow-sm backdrop-blur-sm"
+        role="tablist"
+        aria-label="Focal layout"
+      >
+        {options.map((option) => {
+          const active = lens === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-disabled={!option.enabled}
+              disabled={!option.enabled}
+              title={option.title}
+              onClick={() => onChange(option.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium tracking-wide",
+                active && "bg-foreground text-background",
+                !active &&
+                  option.enabled &&
+                  "text-muted-foreground hover:text-foreground",
+                !option.enabled && "cursor-not-allowed text-muted-foreground/40",
+              )}
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  active && "bg-background",
+                  !active && option.enabled && "bg-muted-foreground/35",
+                  !option.enabled && "bg-muted-foreground/20",
+                )}
+              />
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
