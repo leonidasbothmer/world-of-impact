@@ -26,7 +26,6 @@ export type LayoutRow = {
   node_id: string;
   x: number;
   y: number;
-  pinned: boolean;
 };
 
 export type PrivateNodeRow = {
@@ -76,7 +75,6 @@ export function sharedNodeToMindMap(
     notes: privateNote ?? row.notes ?? undefined,
     ...(tags.length > 0 ? { tags } : {}),
     position: { x: layout?.x ?? 0, y: layout?.y ?? 0 },
-    ...(layout?.pinned ? { pinned: true } : {}),
     ...(row.website ? { website: row.website } : {}),
     ...(row.career_page ? { careerPage: row.career_page } : {}),
     ...(row.linked_in ? { linkedIn: row.linked_in } : {}),
@@ -103,7 +101,6 @@ export function privateNodeToMindMap(
     notes: row.notes ?? undefined,
     ...(row.tags && row.tags.length > 0 ? { tags: row.tags } : {}),
     position: { x: layout?.x ?? 0, y: layout?.y ?? 0 },
-    ...(layout?.pinned ? { pinned: true } : {}),
     ...(row.linked_in ? { linkedIn: row.linked_in } : {}),
     ...(row.image_url ? { imageUrl: row.image_url } : {}),
     ...(contact?.email ? { email: contact.email } : {}),

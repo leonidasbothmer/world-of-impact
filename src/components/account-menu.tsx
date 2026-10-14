@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Briefcase, ChevronLeft, LogOut, UserRound } from "lucide-react";
+import { ChevronLeft, LogOut, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,15 +15,7 @@ export type AccountProfile = {
   position: string;
 };
 
-export function AccountMenu({
-  profile,
-  jobTrackerActive = false,
-  onOpenJobTracker,
-}: {
-  profile: AccountProfile;
-  jobTrackerActive?: boolean;
-  onOpenJobTracker?: () => void;
-}) {
+export function AccountMenu({ profile }: { profile: AccountProfile }) {
   const router = useRouter();
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -134,19 +126,6 @@ export function AccountMenu({
               >
                 <UserRound className="size-3.5" />
                 Profile
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                aria-current={jobTrackerActive ? "page" : undefined}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted${jobTrackerActive ? " bg-muted" : ""}`}
-                onClick={() => {
-                  close();
-                  onOpenJobTracker?.();
-                }}
-              >
-                <Briefcase className="size-3.5" />
-                Job tracker
               </button>
               <form action="/auth/signout" method="post" className="mt-1 border-t pt-1">
                 <button

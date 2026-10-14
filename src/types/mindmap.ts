@@ -18,11 +18,6 @@ export interface MindMapNode {
   notes?: string;
   tags?: string[];
   position: NodePosition;
-  /**
-   * When true, d3-force keeps this node fixed at `position` (fx/fy).
-   * Dragging a node pins it. Unpin from the canvas pin, or pin and unpin from the node panel.
-   */
-  pinned?: boolean;
   /** Organization fields */
   orgEmail?: string;
   website?: string;
@@ -59,13 +54,6 @@ export interface MindMapData {
 
 export type MindMapGraphChange =
   | { reason: "positions"; positions: Record<string, NodePosition> }
-  | {
-      reason: "pin";
-      id: string;
-      pinned: boolean;
-      position?: NodePosition;
-      extraPositions?: Record<string, NodePosition>;
-    }
   | { reason: "connect"; edge: MindMapEdge }
   | { reason: "create"; node: MindMapNode; edge: MindMapEdge }
   | { reason: "label"; id: string; label?: string }
@@ -80,16 +68,8 @@ export type MindMapAction =
   | { action: "updateEdge"; edge: MindMapEdge }
   | { action: "deleteEdge"; id: string }
   | { action: "updatePositions"; positions: Record<string, NodePosition> }
-  | {
-      action: "updatePin";
-      id: string;
-      pinned: boolean;
-      position?: NodePosition;
-      extraPositions?: Record<string, NodePosition>;
-    }
   | { action: "createWithEdge"; node: MindMapNode; edge: MindMapEdge }
-  | { action: "deleteEdges"; ids: string[] }
-  | { action: "unpinAll" };
+  | { action: "deleteEdges"; ids: string[] };
 
 export type MindMapPatchBody =
   | MindMapAction

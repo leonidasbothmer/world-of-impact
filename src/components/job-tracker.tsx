@@ -21,6 +21,7 @@ import {
   calendarDate,
   formatTrackDate,
   shownTrackStatus,
+  trackClosedOn,
   type TrackStatus,
 } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,7 @@ type JobTrackerProps = {
   onSetStatus: (id: string, status: TrackStatus) => void;
   onSetArchived: (id: string, archived: boolean) => void;
   onSetRole: (id: string, role: string) => void;
-  onSetDate: (id: string, field: "appliedOn" | "updatedOn", value: string) => void;
+  onSetDate: (id: string, field: "appliedOn" | "closedOn", value: string) => void;
   onPatchLink: (id: string, patch: TrackerLinkPatch) => void;
 };
 
@@ -224,7 +225,7 @@ export function JobTracker({
   const total = organizations.active.length;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <h2 className="text-xs font-medium">Job tracker</h2>
         <span className="text-xs text-muted-foreground">
@@ -301,7 +302,9 @@ export function JobTracker({
               <th className="px-2 py-1.5 font-medium">People</th>
               <th className="px-2 py-1.5 font-medium">Position</th>
               <th className="px-2 py-1.5 font-medium">Applied</th>
-              <th className="px-2 py-1.5 font-medium">Last updated</th>
+              <th className="px-2 py-1.5 font-medium" title="Date the process moved to the talent pool or was denied">
+                Closed
+              </th>
               <th className="px-2 py-1.5 font-medium">LinkedIn</th>
               <th className="px-2 py-1.5 font-medium">
                 <span className="sr-only">Actions</span>
@@ -413,7 +416,7 @@ function TrackerRow({
   onSetStatus: (id: string, status: TrackStatus) => void;
   onSetArchived: (id: string, archived: boolean) => void;
   onSetRole: (id: string, role: string) => void;
-  onSetDate: (id: string, field: "appliedOn" | "updatedOn", value: string) => void;
+  onSetDate: (id: string, field: "appliedOn" | "closedOn", value: string) => void;
   onCommitLinkedIn: (value: string) => void;
 }) {
   const state = readTrackState(node);
@@ -515,12 +518,22 @@ function TrackerRow({
           name={node.name}
           onChange={(value) => onSetDate(node.id, "appliedOn", value)}
         />
-      <TrackDateCell
-          value={state?.updatedOn}
-          label="Last updated"
+      {state && (state.status === "pool" || state.status === "denied") ? (
+        <TrackDateCell
+          value={trackClosedOn(state)}
+          label="Closed"
           name={node.name}
-          onChange={(value) => onSetDate(node.id, "updatedOn", value)}
+          onChange={(value) => onSetDate(node.id, "closedOn", value)}
         />
+      ) : (
+        <td className="px-2 py-1">
+          <span className="flex h-6 items-center text-xs text-muted-foreground">
+            {state?.status === "running" || state?.status === "followup"
+              ? "Running"
+              : "—"}
+          </span>
+        </td>
+      )}
       <TextCell
         field="linkedIn"
         label="LinkedIn"

@@ -16,7 +16,6 @@ import type { MindMapData, NodeType } from "@/types/mindmap";
 
 export type ForceSimNode = SimulationNodeDatum & {
   id: string;
-  pinned?: boolean;
   type?: NodeType;
 };
 
@@ -462,7 +461,8 @@ export function isPersonPersonEdge(
 
 /**
  * Runs a d3-force simulation and writes positions into React Flow nodes.
- * Unpinned nodes settle by links; pinned nodes stay fixed (fx/fy).
+ * Nodes settle by links. A drag holds a node (fx/fy); releasing it
+ * continues the simulation from the drop point.
  * Each problem keeps a cluster around a moving center. Shared links let
  * related problems drift together; unrelated clusters stay apart.
  * People are moons: they are omitted from the forces and placed around the
@@ -488,7 +488,6 @@ export function useForceLayout({
   const draggingRef = useRef<Set<string>>(new Set());
   const pausedRef = useRef(false);
   const pausedAlphaRef = useRef(0);
-  const reheatWhilePausedRef = useRef(false);
   const onSettledRef = useRef(onSettled);
   onSettledRef.current = onSettled;
 
@@ -499,7 +498,6 @@ export function useForceLayout({
     const key = topologyKey(data);
     const existing = nodesByIdRef.current;
     const nextMap = new Map<string, ForceSimNode>();
-    let reheat = false;
 
     for (const node of data.nodes) {
       const prev = existing.get(node.id);
@@ -513,13 +511,7 @@ export function useForceLayout({
         simNode.y = node.position.y;
       }
       simNode.type = node.type;
-      if (node.pinned) {
-        simNode.pinned = true;
-        simNode.fx = node.position.x;
-        simNode.fy = node.position.y;
-      } else if (!draggingRef.current.has(node.id)) {
-        if (simNode.pinned) reheat = true;
-        simNode.pinned = false;
+      if (!draggingRef.current.has(node.id)) {
         simNode.fx = undefined;
         simNode.fy = undefined;
       }
@@ -627,10 +619,6 @@ export function useForceLayout({
         typeof forceLink<ForceSimNode, ForceSimLink>
       > | null;
       linkForce?.links(simLinks);
-      if (reheat) {
-        if (pausedRef.current) reheatWhilePausedRef.current = true;
-        else simulation.alphaTarget(0).alpha(0.4).restart();
-      }
     }
     if (pausedRef.current) simRef.current?.stop();
   }, [data, enabled, setNodes]);
@@ -658,19 +646,16 @@ export function useForceLayout({
         simNode.fx = x;
         simNode.fy = y;
       },
-      releaseNode(id: string, pinned?: boolean) {
+      releaseNode(id: string) {
         const simNode = nodesByIdRef.current.get(id);
         draggingRef.current.delete(id);
         if (!simNode) return;
-        if (pinned) {
-          simNode.pinned = true;
-        } else {
-          simNode.pinned = false;
-          simNode.fx = undefined;
-          simNode.fy = undefined;
-          if (!pausedRef.current) {
-            simRef.current?.alphaTarget(0).alpha(0.35).restart();
-          }
+        if (typeof simNode.fx === "number") simNode.x = simNode.fx;
+        if (typeof simNode.fy === "number") simNode.y = simNode.fy;
+        simNode.fx = undefined;
+        simNode.fy = undefined;
+        if (!pausedRef.current) {
+          simRef.current?.alphaTarget(0).alpha(0.35).restart();
         }
       },
       pause() {
@@ -683,12 +668,8 @@ export function useForceLayout({
       resume() {
         pausedRef.current = false;
         const sim = simRef.current;
-        const alpha = Math.max(
-          pausedAlphaRef.current,
-          reheatWhilePausedRef.current ? 0.4 : 0,
-        );
+        const alpha = pausedAlphaRef.current;
         pausedAlphaRef.current = 0;
-        reheatWhilePausedRef.current = false;
         if (!sim || alpha <= 0.05) return;
         sim.alphaTarget(0).alpha(alpha).restart();
       },

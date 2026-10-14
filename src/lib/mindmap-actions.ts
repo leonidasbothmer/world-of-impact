@@ -21,7 +21,7 @@ export function applyMindMapAction(
         ...data,
         nodes: data.nodes.map((n) =>
           n.id === body.node.id
-            ? { ...body.node, position: n.position, pinned: body.node.pinned ?? n.pinned }
+            ? { ...body.node, position: n.position }
             : n,
         ),
       };
@@ -64,26 +64,6 @@ export function applyMindMapAction(
       });
       return { ...data, nodes };
     }
-    case "updatePin": {
-      const nodes = data.nodes.map((node) => {
-        const pos =
-          body.extraPositions?.[node.id] ??
-          (node.id === body.id ? body.position : undefined);
-        const nextPos = pos ?? node.position;
-        if (node.id === body.id) {
-          return {
-            ...node,
-            position: { x: nextPos.x, y: nextPos.y },
-            pinned: body.pinned,
-          };
-        }
-        if (pos) {
-          return { ...node, position: { x: nextPos.x, y: nextPos.y } };
-        }
-        return node;
-      });
-      return { ...data, nodes };
-    }
     case "createWithEdge": {
       let next = data;
       if (!next.nodes.some((n) => n.id === body.node.id)) {
@@ -98,13 +78,6 @@ export function applyMindMapAction(
       return {
         ...data,
         edges: data.edges.filter((e) => !body.ids.includes(e.id)),
-      };
-    case "unpinAll":
-      return {
-        ...data,
-        nodes: data.nodes.map((node) =>
-          node.pinned ? { ...node, pinned: false } : node,
-        ),
       };
     default:
       return data;

@@ -193,7 +193,6 @@ function toFlowNodes(
   nodes: MindMapNode[],
   selectedId: string | null,
   neighbors: Set<string>,
-  onUnpin?: (id: string) => void,
   endpoints?: ReadonlySet<string>,
   revealAll = false,
 ): Node[] {
@@ -206,7 +205,7 @@ function toFlowNodes(
       id: node.id,
       type: "mindmap",
       position: node.position,
-      data: { node, onUnpin, highlight },
+      data: { node, highlight },
       selected,
       zIndex: canvasZIndex(node.type, selected, highlight),
       style: nodeFocusStyle(focusId, node.id, highlight, edgeFocused, node.type),
@@ -462,24 +461,6 @@ function MindMapGraphInner({
     [onGraphChange],
   );
 
-  const persistPin = useCallback(
-    (
-      id: string,
-      pinned: boolean,
-      position?: { x: number; y: number },
-      extraPositions?: Record<string, { x: number; y: number }>,
-    ) => {
-      onGraphChange({
-        reason: "pin",
-        id,
-        pinned,
-        position,
-        extraPositions,
-      });
-    },
-    [onGraphChange],
-  );
-
   const didFitRef = useRef(false);
   const userMovedRef = useRef(false);
   const framingRef = useRef(false);
@@ -537,14 +518,6 @@ function MindMapGraphInner({
       cancelSettleFrame.current = scheduleFrame(1.1, 450);
     },
   });
-
-  const unpinNode = useCallback(
-    (id: string) => {
-      force.releaseNode(id, false);
-      persistPin(id, false);
-    },
-    [force, persistPin],
-  );
 
   // Saved positions sit around the origin, which the default camera misses.
   // Cap the first frame so a too-early fit cannot zoom into the core and
@@ -726,7 +699,6 @@ function MindMapGraphInner({
             ),
             data: {
               node: source,
-              onUnpin: unpinNode,
               highlight,
             },
           };
@@ -773,7 +745,6 @@ function MindMapGraphInner({
         nodes,
         selectedNodeId,
         nextNeighbors,
-        unpinNode,
         endpoints,
         revealAll,
       );
@@ -781,7 +752,7 @@ function MindMapGraphInner({
     setEdges(
       toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId, revealAll),
     );
-  }, [data, orbitId, selectedEdgeId, selectedNodeId, setNodes, setEdges, unpinNode, viewKey, visibleIds]);
+  }, [data, orbitId, selectedEdgeId, selectedNodeId, setNodes, setEdges, viewKey, visibleIds]);
 
   useEffect(() => {
     if (!orbitIdRef.current && !restoreRef.current) return;
@@ -892,16 +863,11 @@ function MindMapGraphInner({
   );
 
   const onNodeDragStop: OnNodeDrag = useCallback(
-    (_event, node, nextNodes) => {
+    (_event, node) => {
       if (orbitIdRef.current) return;
-      force.releaseNode(node.id, true);
-      const positions: Record<string, { x: number; y: number }> = {};
-      for (const n of nextNodes) {
-        positions[n.id] = n.position;
-      }
-      persistPin(node.id, true, node.position, positions);
+      force.releaseNode(node.id);
     },
-    [force, persistPin],
+    [force],
   );
 
   const onConnect: OnConnect = useCallback(
@@ -971,7 +937,6 @@ function MindMapGraphInner({
         notes: input.notes ?? "",
         tags: [],
         position: draft.position,
-        pinned: true,
         ...(input.linkedIn ? { linkedIn: input.linkedIn } : {}),
         ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
       };
@@ -991,14 +956,14 @@ function MindMapGraphInner({
       const shown = shownGraph(next, shownIds);
       viewKeyRef.current = layoutSignature(next, shownIds);
       const createdNeighbors = neighborIds(id, next.edges);
-      setNodes(toFlowNodes(shown.nodes, id, createdNeighbors, unpinNode));
+      setNodes(toFlowNodes(shown.nodes, id, createdNeighbors));
       setEdges(toFlowEdges(shown.edges, shown.nodes, id));
       setDraft(null);
       setSelectedEdgeId(null);
       onSelectNode(id);
       onGraphChange({ reason: "create", node: newNode, edge: newEdge });
     },
-    [draft, layoutSignature, onGraphChange, onSelectNode, setEdges, setNodes, unpinNode],
+    [draft, layoutSignature, onGraphChange, onSelectNode, setEdges, setNodes],
   );
 
   const handleEdgesChange = useCallback(

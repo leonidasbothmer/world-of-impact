@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, PinOff, Table2, Waypoints } from "lucide-react";
+import { Loader2, Table2, Waypoints } from "lucide-react";
 import Link from "next/link";
 import { focusNeighborhoodIds } from "@/lib/focus-neighborhood";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -13,18 +13,10 @@ import {
 import { NodeSearch, type SearchCreateInput } from "@/components/node-search";
 import { isOrgSolutionPair, NodePanel } from "@/components/node-panel";
 import { JobTracker } from "@/components/job-tracker";
+import { PeopleDirectory } from "@/components/people-directory";
 import { OrgTable } from "@/components/org-table";
 import { AddNodeForm } from "@/components/add-node-form";
 import { AccountMenu, type AccountProfile } from "@/components/account-menu";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
 import {
   DEFAULT_HIDDEN_TYPES,
@@ -79,11 +71,12 @@ export function MindMapApp({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [confirmUnpinAll, setConfirmUnpinAll] = useState(false);
   const [hiddenTypes, setHiddenTypes] = useState<NodeType[]>([
     ...DEFAULT_HIDDEN_TYPES,
   ]);
-  const [view, setView] = useState<"graph" | "table" | "tracker">("graph");
+  const [view, setView] = useState<"graph" | "table" | "tracker" | "people">(
+    "graph",
+  );
   const [focusIds, setFocusIds] = useState<string[]>([]);
   const [showFullGraph, setShowFullGraph] = useState(true);
   const hiddenTypeSet = useMemo(
@@ -300,10 +293,7 @@ export function MindMapApp({
       if (!canEdit) {
         const action = options?.action?.action;
         const localOnly =
-          action === "updatePositions" ||
-          action === "updatePin" ||
-          action === "unpinAll" ||
-          !options?.action;
+          action === "updatePositions" || !options?.action;
         if (localOnly) {
           dataRef.current = next;
           setData(next);
@@ -420,7 +410,7 @@ export function MindMapApp({
 
   function handleSetTrackDate(
     id: string,
-    field: "appliedOn" | "updatedOn",
+    field: "appliedOn" | "closedOn",
     value: string,
   ) {
     const node = dataRef.current?.nodes.find((item) => item.id === id);
@@ -697,44 +687,6 @@ export function MindMapApp({
         return;
       }
 
-      if (change.reason === "pin") {
-        const nodes = current.nodes.map((node) => {
-          const pos =
-            change.extraPositions?.[node.id] ??
-            (node.id === change.id ? change.position : undefined);
-          const nextPos = pos ?? node.position;
-          const nextPinned = node.id === change.id ? change.pinned : node.pinned;
-          const samePos =
-            Math.abs(nextPos.x - node.position.x) < 0.5 &&
-            Math.abs(nextPos.y - node.position.y) < 0.5;
-          if (samePos && (node.id !== change.id || nextPinned === node.pinned)) {
-            return node;
-          }
-          if (node.id === change.id) {
-            return {
-              ...node,
-              position: { x: nextPos.x, y: nextPos.y },
-              pinned: change.pinned,
-            };
-          }
-          return { ...node, position: { x: nextPos.x, y: nextPos.y } };
-        });
-        commit(
-          { ...current, nodes },
-          {
-            immediate: true,
-            action: {
-              action: "updatePin",
-              id: change.id,
-              pinned: change.pinned,
-              position: change.position,
-              extraPositions: change.extraPositions,
-            },
-          },
-        );
-        return;
-      }
-
       if (change.reason === "connect") {
         const exists = current.edges.some(
           (edge) =>
@@ -833,21 +785,6 @@ export function MindMapApp({
     setFocusRequest({ id, token: focusTokenRef.current });
   }
 
-  function handleUnpinAll() {
-    const current = dataRef.current;
-    if (!current) return;
-    commit(
-      {
-        ...current,
-        nodes: current.nodes.map((node) =>
-          node.pinned ? { ...node, pinned: false } : node,
-        ),
-      },
-      { immediate: true, action: { action: "unpinAll" } },
-    );
-    setConfirmUnpinAll(false);
-  }
-
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
@@ -867,11 +804,10 @@ export function MindMapApp({
 
   if (!data) return null;
 
-  const pinnedCount = data.nodes.filter((n) => n.pinned).length;
-
   return (
     <div className="flex h-full flex-col">
-      <header className="relative z-30 flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 md:px-4 md:py-3">
+      <div className="relative z-30 shrink-0">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-3 py-2 md:px-4">
         <button
           type="button"
           onClick={returnHome}
@@ -887,6 +823,96 @@ export function MindMapApp({
           </p>
         </button>
 
+        <nav
+          aria-label="Primary"
+          className="ml-auto flex flex-wrap items-center gap-1"
+        >
+          <button
+            type="button"
+            aria-current={
+              view === "graph" || view === "table" ? "page" : undefined
+            }
+            className={cn(
+              "rounded-md px-2.5 py-1 text-sm font-medium",
+              view === "graph" || view === "table"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+            onClick={() => {
+              if (view === "graph") returnHome();
+              else setView("graph");
+            }}
+          >
+            Canvas
+          </button>
+          {signedIn ? (
+            <>
+              <button
+                type="button"
+                aria-current={view === "people" ? "page" : undefined}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-sm font-medium",
+                  view === "people"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                onClick={() => setView("people")}
+              >
+                People
+              </button>
+              <button
+                type="button"
+                aria-current={view === "tracker" ? "page" : undefined}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-sm font-medium",
+                  view === "tracker"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                onClick={() => setView("tracker")}
+              >
+                Job tracker
+              </button>
+            </>
+          ) : null}
+          {authEnabled ? (
+            signedIn && accountProfile ? (
+              <AccountMenu profile={accountProfile} />
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex h-7 items-center rounded-full border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted"
+              >
+                Sign in
+              </Link>
+            )
+          ) : null}
+        </nav>
+      </header>
+
+      {view === "graph" || view === "table" ? (
+      <header
+        aria-label="Canvas"
+        className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5 md:px-4"
+      >
+        {canEdit ? (
+          <div className="flex items-center gap-1.5">
+            {dirty && (
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                Unsaved layout…
+              </span>
+            )}
+            {saving && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+            <AddNodeForm
+              nodes={data.nodes}
+              onAdd={handleAddNode}
+              onSelectExisting={handleSearchSelect}
+            />
+          </div>
+        ) : null}
+
         <NodeSearch
           nodes={data.nodes}
           onSelect={handleSearchSelect}
@@ -900,12 +926,9 @@ export function MindMapApp({
 
         {focusIds.length > 0 ? (
           <div
-            className="inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs"
+            className="inline-flex items-center rounded-lg border p-0.5 text-xs"
             title="Limit the canvas to nodes near your focus roots"
           >
-            <span className="text-muted-foreground hidden sm:inline">
-              {showFullGraph ? "Full graph" : "My zones"}
-            </span>
             <button
               type="button"
               className={cn(
@@ -970,134 +993,63 @@ export function MindMapApp({
           </button>
         </div>
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5">
-          {canEdit && dirty && (
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              Unsaved layout…
-            </span>
-          )}
-          {canEdit && saving && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-          {canEdit ? (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setConfirmUnpinAll(true)}
-                disabled={pinnedCount === 0}
-                className="gap-1"
-                title="Remove all pins"
-              >
-                <PinOff className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Unpin all</span>
-              </Button>
-              <AddNodeForm
-                nodes={data.nodes}
-                onAdd={handleAddNode}
-                onSelectExisting={handleSearchSelect}
-              />
-            </>
-          ) : null}
-          {authEnabled ? (
-            signedIn && accountProfile ? (
-              <AccountMenu
-                profile={accountProfile}
-                jobTrackerActive={view === "tracker"}
-                onOpenJobTracker={() => setView("tracker")}
-              />
-            ) : (
-              <Link
-                href="/login"
-                className="inline-flex h-7 items-center rounded-full border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted"
-              >
-                Sign in
-              </Link>
-            )
-          ) : null}
-        </div>
-        </div>
-
         {view === "graph" ? (
-        <div
-          className="flex w-full flex-wrap items-center gap-1.5"
-          role="toolbar"
-          aria-label="Categories on the graph"
-        >
-          {(Object.keys(NODE_TYPE_CONFIG) as NodeType[]).map((type) => {
-            const style = NODE_TYPE_CONFIG[type];
-            const shown = !hiddenTypeSet.has(type);
-            return (
-              <button
-                key={type}
-                type="button"
-                aria-pressed={shown}
-                title={
-                  type === "media"
-                    ? shown
-                      ? "Hide books, films, and other media"
-                      : "Show books, films, and other media"
-                    : type === "academic"
+          <div
+            className="ml-auto flex flex-wrap items-center justify-end gap-1.5"
+            role="toolbar"
+            aria-label="Categories on the graph"
+          >
+            {(Object.keys(NODE_TYPE_CONFIG) as NodeType[]).map((type) => {
+              const style = NODE_TYPE_CONFIG[type];
+              const shown = !hiddenTypeSet.has(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={shown}
+                  title={
+                    type === "media"
                       ? shown
-                        ? "Hide academics and courses"
-                        : "Show academics and courses"
-                      : shown
-                        ? `Hide ${style.label.toLowerCase()}`
-                        : `Show ${style.label.toLowerCase()}`
-                }
-                onClick={() =>
-                  setHiddenTypes((current) => {
-                    const next = new Set(current);
-                    if (next.has(type)) next.delete(type);
-                    else next.add(type);
-                    return [...next];
-                  })
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-opacity",
-                  shown
-                    ? `${style.bg} ${style.border} ${style.text}`
-                    : "border-border bg-muted/50 text-muted-foreground line-through opacity-60",
-                )}
-              >
-                <span
+                        ? "Hide books, films, and other media"
+                        : "Show books, films, and other media"
+                      : type === "academic"
+                        ? shown
+                          ? "Hide academics and courses"
+                          : "Show academics and courses"
+                        : shown
+                          ? `Hide ${style.label.toLowerCase()}`
+                          : `Show ${style.label.toLowerCase()}`
+                  }
+                  onClick={() =>
+                    setHiddenTypes((current) => {
+                      const next = new Set(current);
+                      if (next.has(type)) next.delete(type);
+                      else next.add(type);
+                      return [...next];
+                    })
+                  }
                   className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    shown ? style.dot : "bg-muted-foreground/40",
+                    "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-opacity",
+                    shown
+                      ? `${style.bg} ${style.border} ${style.text}`
+                      : "border-border bg-muted/50 text-muted-foreground line-through opacity-60",
                   )}
-                />
-                {style.label}
-              </button>
-            );
-          })}
-        </div>
+                >
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      shown ? style.dot : "bg-muted-foreground/40",
+                    )}
+                  />
+                  {style.label}
+                </button>
+              );
+            })}
+          </div>
         ) : null}
       </header>
-
-      <Sheet open={confirmUnpinAll} onOpenChange={setConfirmUnpinAll}>
-        <SheetContent side="bottom" className="h-auto">
-          <SheetHeader>
-            <SheetTitle>Remove all pins?</SheetTitle>
-            <SheetDescription>
-              {pinnedCount === 1
-                ? "1 pinned node will return to the force layout."
-                : `${pinnedCount} pinned nodes will return to the force layout.`}
-            </SheetDescription>
-          </SheetHeader>
-          <SheetFooter className="flex-row justify-end gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmUnpinAll(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleUnpinAll}>
-              Unpin all
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      ) : null}
+      </div>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <main
@@ -1135,8 +1087,19 @@ export function MindMapApp({
           </div>
         ) : null}
 
-        {view === "tracker" ? (
+        {view === "people" ? (
           <div className="flex min-h-0 flex-1 flex-col">
+            <PeopleDirectory
+              nodes={data.nodes}
+              edges={data.edges}
+              selectedNodeId={selectedNodeId}
+              onOpenOnGraph={handleSearchSelect}
+            />
+          </div>
+        ) : null}
+
+        {view === "tracker" ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <JobTracker
               nodes={data.nodes}
               edges={data.edges}

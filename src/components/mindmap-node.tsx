@@ -2,7 +2,6 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
-import { Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_TYPE_CONFIG, PERSON_NODE_SIZE } from "@/lib/node-styles";
 import type { NodeHighlight } from "@/lib/selection-highlight";
@@ -10,7 +9,6 @@ import type { MindMapNode, NodeType } from "@/types/mindmap";
 
 export type MindMapNodeData = {
   node: MindMapNode;
-  onUnpin?: (id: string) => void;
   highlight?: NodeHighlight;
 };
 
@@ -124,30 +122,6 @@ function DropTarget({ active }: { active: boolean }) {
   );
 }
 
-function PinBadge({
-  pinned,
-  onUnpin,
-}: {
-  pinned?: boolean;
-  onUnpin?: () => void;
-}) {
-  if (!pinned) return null;
-  return (
-    <button
-      type="button"
-      className="nodrag nopan absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm hover:text-foreground"
-      aria-label="Unpin node"
-      onClick={(event) => {
-        event.stopPropagation();
-        onUnpin?.();
-      }}
-      onDoubleClick={(event) => event.stopPropagation()}
-    >
-      <Pin className="h-2.5 w-2.5 fill-current" />
-    </button>
-  );
-}
-
 /** Slightly tighter than `rounded-xl` (0.875rem). Image radius is this minus the border. */
 const ORG_TILE_RADIUS = "0.75rem";
 const ORG_TILE_BORDER = "2px";
@@ -168,14 +142,12 @@ function AvatarTileNode({
   selected,
   highlight,
   rounded,
-  onUnpin,
 }: {
   id: string;
   node: MindMapNode;
   selected?: boolean;
   highlight?: NodeHighlight;
   rounded: "full" | "2xl";
-  onUnpin?: (id: string) => void;
 }) {
   const style = NODE_TYPE_CONFIG[node.type as NodeType];
   const initials = initialsFromName(node.name);
@@ -185,7 +157,6 @@ function AvatarTileNode({
     <div className="relative flex flex-col items-center gap-1">
       <CenterHandles />
       <div className="relative">
-        <PinBadge pinned={node.pinned} onUnpin={() => onUnpin?.(node.id)} />
         <div
           className={cn(
             "relative h-10 w-10 overflow-visible border-2 shadow-sm transition-shadow box-border",
@@ -301,13 +272,11 @@ function PersonMoonNode({
   node,
   selected,
   highlight,
-  onUnpin,
 }: {
   id: string;
   node: MindMapNode;
   selected?: boolean;
   highlight?: NodeHighlight;
-  onUnpin?: (id: string) => void;
 }) {
   const style = NODE_TYPE_CONFIG.person;
   const initials = initialsFromName(node.name);
@@ -321,7 +290,6 @@ function PersonMoonNode({
     >
       <CenterHandles />
       <div className="relative h-full w-full">
-        <PinBadge pinned={node.pinned} onUnpin={() => onUnpin?.(node.id)} />
         <div
           className={cn(
             "relative h-full w-full overflow-hidden rounded-full border-2 shadow-sm box-border",
@@ -373,13 +341,11 @@ function BoxedLabelNode({
   node,
   selected,
   highlight,
-  onUnpin,
 }: {
   id: string;
   node: MindMapNode;
   selected?: boolean;
   highlight?: NodeHighlight;
-  onUnpin?: (id: string) => void;
 }) {
   const style = NODE_TYPE_CONFIG[node.type as NodeType];
   const { dropHover, dropActive } = useDropHover(id);
@@ -402,7 +368,6 @@ function BoxedLabelNode({
         aria-hidden
       />
       <CenterHandles />
-      <PinBadge pinned={node.pinned} onUnpin={() => onUnpin?.(node.id)} />
       <p className="flex w-fit flex-col items-center text-center text-xs font-semibold leading-tight">
         {lines.map((line, index) => (
           <span key={`${index}-${line}`} className="whitespace-nowrap">
@@ -417,7 +382,7 @@ function BoxedLabelNode({
 }
 
 export function MindMapFlowNode({ id, data, selected }: NodeProps) {
-  const { node, onUnpin, highlight } = data as MindMapNodeData;
+  const { node, highlight } = data as MindMapNodeData;
 
   if (node.type === "person") {
     return (
@@ -426,7 +391,6 @@ export function MindMapFlowNode({ id, data, selected }: NodeProps) {
         node={node}
         selected={selected}
         highlight={highlight}
-        onUnpin={onUnpin}
       />
     );
   }
@@ -439,7 +403,6 @@ export function MindMapFlowNode({ id, data, selected }: NodeProps) {
         selected={selected}
         highlight={highlight}
         rounded="2xl"
-        onUnpin={onUnpin}
       />
     );
   }
@@ -450,7 +413,6 @@ export function MindMapFlowNode({ id, data, selected }: NodeProps) {
       node={node}
       selected={selected}
       highlight={highlight}
-      onUnpin={onUnpin}
     />
   );
 }

@@ -9,7 +9,6 @@ import {
   Loader2,
   Locate,
   Pencil,
-  Pin,
   Share2,
   X,
 } from "lucide-react";
@@ -227,7 +226,6 @@ export function NodePanel({
       tags,
       locations,
       position: node.position,
-      pinned: node.pinned,
     };
     if (locations.length === 0) delete next.locations;
     if (!next.careerPage?.trim()) delete next.careerPage;
@@ -372,21 +370,6 @@ export function NodePanel({
                       <Briefcase className={cn(isTracked(node) && "fill-current")} />
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={node.pinned ? "Unpin node" : "Pin node"}
-                    aria-pressed={!!node.pinned}
-                    title={node.pinned ? "Unpin node" : "Pin node"}
-                    className={cn(
-                      "text-muted-foreground",
-                      node.pinned && "text-foreground",
-                    )}
-                    onClick={() => onSave({ ...node, pinned: !node.pinned })}
-                  >
-                    <Pin className={cn(node.pinned && "fill-current")} />
-                  </Button>
                   <ConfirmDelete
                     key={node.id}
                     label="Delete node"

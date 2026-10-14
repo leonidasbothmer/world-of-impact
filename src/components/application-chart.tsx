@@ -39,7 +39,7 @@ export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
   const summary = useMemo(() => applicationActivity(nodes, "day").at(-1), [nodes]);
 
   return (
-    <section className="shrink-0 border-t bg-background">
+    <section className="min-w-0 shrink-0 border-t bg-background">
       <button
         type="button"
         className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs font-medium hover:bg-muted/50"
@@ -68,13 +68,13 @@ export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
       </button>
       <div
         className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
+          "grid min-w-0 transition-[grid-template-rows] duration-200 ease-out",
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
-        <div className="overflow-hidden" inert={!open}>
-          <div className="border-t py-3">
-            <ApplicationChart nodes={nodes} />
+        <div className="min-w-0 overflow-hidden" inert={!open}>
+          <div className="min-w-0 border-t py-3">
+            <ApplicationChart nodes={nodes} visible={open} />
           </div>
         </div>
       </div>
@@ -82,7 +82,13 @@ export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
   );
 }
 
-function ApplicationChart({ nodes }: { nodes: MindMapNode[] }) {
+function ApplicationChart({
+  nodes,
+  visible,
+}: {
+  nodes: MindMapNode[];
+  visible: boolean;
+}) {
   const [grain, setGrain] = useState<ActivityGrain>("day");
   const [mode, setMode] = useState<ActivityMode>("new");
   const [showSent, setShowSent] = useState(true);
@@ -102,7 +108,7 @@ function ApplicationChart({ nodes }: { nodes: MindMapNode[] }) {
   const added = valuesAt(points, selected, "new");
 
   return (
-    <div className="flex flex-col gap-3 px-4">
+    <div className="flex min-w-0 flex-col gap-3 px-4">
       <div className="flex flex-wrap items-center gap-2">
         <div
           className="inline-flex rounded-lg border bg-muted/40 p-0.5"
@@ -230,6 +236,7 @@ function ApplicationChart({ nodes }: { nodes: MindMapNode[] }) {
             showSent={showSent}
             showDenied={showDenied}
             selected={selected}
+            visible={visible}
             onSelect={(index) => {
               setActive((current) => (current === index ? current : index));
             }}
@@ -300,6 +307,7 @@ function ActivityPlot({
   showSent,
   showDenied,
   selected,
+  visible,
   onSelect,
 }: {
   points: ActivityPoint[];
@@ -308,6 +316,7 @@ function ActivityPlot({
   showSent: boolean;
   showDenied: boolean;
   selected: number;
+  visible: boolean;
   onSelect: (index: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -324,15 +333,23 @@ function ActivityPlot({
     return () => observer.disconnect();
   }, []);
 
-  const scrollKey = `${grain}:${points.length}`;
-  const scrolledFor = useRef("");
+  const scrollKey = `${grain}:${points.length}:${visible}`;
   useLayoutEffect(() => {
     const node = scrollRef.current;
-    if (!node || width === 0) return;
-    if (scrolledFor.current === scrollKey) return;
-    scrolledFor.current = scrollKey;
-    node.scrollLeft = node.scrollWidth;
-  }, [scrollKey, width]);
+    if (!node || !visible || width === 0) return;
+    // The plot is mounted while the section is collapsed, so the first
+    // scroll lands before the row has height and does not stick.
+    const pin = () => {
+      node.scrollLeft = node.scrollWidth;
+    };
+    pin();
+    const frame = requestAnimationFrame(pin);
+    const timer = window.setTimeout(pin, 250);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [scrollKey, width, visible]);
 
   const bars = points.map((point, index) => {
     const values = valuesAt(points, index, mode);

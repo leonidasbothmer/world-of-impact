@@ -8,6 +8,7 @@ const SINCE_PREFIX = "track-since:";
 const ROLE_PREFIX = "track-role:";
 const APPLIED_PREFIX = "track-applied:";
 const UPDATED_PREFIX = "track-updated:";
+const CLOSED_PREFIX = "track-closed:";
 const DENIED_PREFIX = "track-denied:";
 const ARCHIVED_TAG = "track-archived";
 
@@ -40,8 +41,10 @@ export type TrackState = {
   role?: string;
   /** Calendar date the application was first marked in progress. YYYY-MM-DD. */
   appliedOn?: string;
-  /** Calendar date the tracker row last changed. YYYY-MM-DD. */
+  /** Earlier row-edit stamp. Kept so older talent-pool rows still have a close date. */
   updatedOn?: string;
+  /** Calendar date the process moved to the talent pool or was denied. YYYY-MM-DD. */
+  closedOn?: string;
   /** Calendar date the application was marked denied. YYYY-MM-DD. */
   deniedOn?: string;
 };
@@ -78,7 +81,7 @@ export const TRACK_STATUSES: {
   },
   {
     value: "denied",
-    label: "Denied",
+    label: "Closed",
     dot: "bg-red-500",
     chip: "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200",
   },
@@ -93,6 +96,7 @@ export function isTrackerTag(tag: string): boolean {
     tag.startsWith(ROLE_PREFIX) ||
     tag.startsWith(APPLIED_PREFIX) ||
     tag.startsWith(UPDATED_PREFIX) ||
+    tag.startsWith(CLOSED_PREFIX) ||
     tag.startsWith(DENIED_PREFIX)
   );
 }
@@ -159,6 +163,7 @@ export function readTrackState(node: MindMapNode): TrackState | null {
     ...(role ? { role } : {}),
     ...readCalendarTag(tags, APPLIED_PREFIX, "appliedOn"),
     ...readCalendarTag(tags, UPDATED_PREFIX, "updatedOn"),
+    ...readCalendarTag(tags, CLOSED_PREFIX, "closedOn"),
     ...readCalendarTag(tags, DENIED_PREFIX, "deniedOn"),
   };
 }
@@ -166,7 +171,7 @@ export function readTrackState(node: MindMapNode): TrackState | null {
 function readCalendarTag(
   tags: string[],
   prefix: string,
-  key: "appliedOn" | "updatedOn" | "deniedOn",
+  key: "appliedOn" | "updatedOn" | "closedOn" | "deniedOn",
 ): Partial<TrackState> {
   const value = tags.find((tag) => tag.startsWith(prefix))?.slice(prefix.length);
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return {};
@@ -198,6 +203,12 @@ export function writeTrackState(node: MindMapNode, state: TrackState): MindMapNo
   if (state.role) tags.push(`${ROLE_PREFIX}${encodeURIComponent(state.role)}`);
   if (state.appliedOn) tags.push(`${APPLIED_PREFIX}${state.appliedOn}`);
   if (state.updatedOn) tags.push(`${UPDATED_PREFIX}${state.updatedOn}`);
+  if (
+    (state.status === "pool" || state.status === "denied") &&
+    state.closedOn
+  ) {
+    tags.push(`${CLOSED_PREFIX}${state.closedOn}`);
+  }
   if (state.status === "denied" && state.deniedOn) {
     tags.push(`${DENIED_PREFIX}${state.deniedOn}`);
   }
@@ -227,26 +238,42 @@ export function withTrackStatus(
   if (status === "running") next.runningSince = now.toISOString();
   else delete next.runningSince;
   const today = calendarDate(now);
-  if (status === "running" && !current.appliedOn) next.appliedOn = today;
+  if ((status === "running" || status === "followup") && !current.appliedOn) {
+    next.appliedOn = today;
+  }
+  if (status === "pool" || status === "denied") {
+    next.closedOn =
+      current.status === status
+        ? (current.closedOn ??
+          (status === "denied" ? current.deniedOn : undefined) ??
+          current.updatedOn ??
+          today)
+        : today;
+  } else {
+    delete next.closedOn;
+  }
   if (status === "denied") {
     next.deniedOn =
-      current.status === "denied"
-        ? (current.deniedOn ?? current.updatedOn ?? today)
-        : today;
+      current.status === "denied" ? (current.deniedOn ?? next.closedOn ?? today) : today;
   } else {
     delete next.deniedOn;
   }
-  next.updatedOn = today;
   return writeTrackState(node, next);
+}
+
+/** Date a talent-pool or denied process closed. Open processes have none. */
+export function trackClosedOn(state: TrackState): string | undefined {
+  if (state.status !== "pool" && state.status !== "denied") return undefined;
+  return (
+    state.closedOn ??
+    (state.status === "denied" ? state.deniedOn : undefined) ??
+    state.updatedOn
+  );
 }
 
 export function withArchived(node: MindMapNode, archived: boolean): MindMapNode {
   const current = readTrackState(node) ?? { status: "todo", archived: false };
-  return writeTrackState(node, {
-    ...current,
-    archived,
-    updatedOn: calendarDate(),
-  });
+  return writeTrackState(node, { ...current, archived });
 }
 
 export function withTrackRole(node: MindMapNode, role: string): MindMapNode {
@@ -255,19 +282,27 @@ export function withTrackRole(node: MindMapNode, role: string): MindMapNode {
   const next: TrackState = { ...current };
   if (trimmed) next.role = trimmed;
   else delete next.role;
-  next.updatedOn = calendarDate();
   return writeTrackState(node, next);
 }
 
 export function withTrackDate(
   node: MindMapNode,
-  field: "appliedOn" | "updatedOn",
+  field: "appliedOn" | "closedOn",
   value: string,
 ): MindMapNode {
   const current = readTrackState(node) ?? { status: "todo", archived: false };
   const next: TrackState = { ...current };
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) next[field] = value;
-  else delete next[field];
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (field === "appliedOn") {
+    if (valid) next.appliedOn = value;
+    else delete next.appliedOn;
+  } else if (valid) {
+    next.closedOn = value;
+    if (next.status === "denied") next.deniedOn = value;
+  } else {
+    delete next.closedOn;
+    if (next.status === "denied") delete next.deniedOn;
+  }
   return writeTrackState(node, next);
 }
 
@@ -337,20 +372,11 @@ function isoStamp(value: string | undefined): string | undefined {
 }
 
 function activityEvent(state: TrackState): ActivityEvent | null {
-  const deniedOn = state.status === "denied"
-    ? isoStamp(state.deniedOn ?? state.updatedOn ?? state.appliedOn)
-    : undefined;
-  let sentOn = isoStamp(state.appliedOn);
-  if (
-    !sentOn &&
-    state.runningSince &&
-    (state.status === "running" || state.status === "followup" || state.status === "denied")
-  ) {
-    const started = Date.parse(state.runningSince);
-    if (!Number.isNaN(started)) sentOn = calendarDate(new Date(started));
-  }
-  if (!sentOn) sentOn = deniedOn;
+  const sentOn = isoStamp(state.appliedOn);
   if (!sentOn) return null;
+  const deniedOn = state.status === "denied"
+    ? isoStamp(state.deniedOn ?? state.closedOn ?? state.appliedOn)
+    : undefined;
   if (!deniedOn) return { sentOn };
   return { sentOn, deniedOn: deniedOn < sentOn ? sentOn : deniedOn };
 }

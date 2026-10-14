@@ -29,18 +29,18 @@ Deploy to Vercel with the same three env vars. Production refuses to start witho
 
 - **Node types** with distinct styling: `problem`, `solution`, `organization`, `person`
 - **Person nodes** render as circular avatars with the name below; click opens the detail panel
-- **Force-directed layout** via **d3-force** (default) — nodes settle by links; optional `pinned` flag reserved for future drag-to-pin (`fx`/`fy`)
+- **Force-directed layout** via **d3-force** — nodes settle by links. Dragging holds a node; releasing it lets the layout continue from the drop point
 - **Remote avatars/logos** — LinkedIn/OG `imageUrl` stored as hotlinks (not downloaded into `public/`)
 - **Pan/zoom** graph canvas with minimap and controls
 - **Click a node** to view and edit details in the side panel
 - **Drag node handles** or use the panel to create labeled relationships
 - **Add nodes** via the header form
 - **Export / import** JSON backup from the UI
-- **Auto-save** node positions after the force sim settles / after dragging (debounced)
+- **Auto-save** node positions after the force sim settles (debounced)
 
 ## Data model
 
-All nodes share: `id`, `name`, `type`, `notes`, `tags`, `position`, optional `pinned`.
+All nodes share: `id`, `name`, `type`, `notes`, `tags`, `position`.
 
 | Type | Extra fields |
 |------|-------------|

@@ -20,6 +20,7 @@ type LocationSuggestInputProps = {
   inputRef?: (element: HTMLInputElement | null) => void;
   onEmptyBackspace?: () => void;
   onNavigate?: (delta: number) => void;
+  onDismiss?: () => void;
 };
 
 export function LocationSuggestInput({
@@ -35,6 +36,7 @@ export function LocationSuggestInput({
   inputRef,
   onEmptyBackspace,
   onNavigate,
+  onDismiss,
   ...props
 }: LocationSuggestInputProps) {
   const listId = useId();
@@ -88,6 +90,7 @@ export function LocationSuggestInput({
     acceptSuggestion,
     onEmptyBackspace,
     onNavigate,
+    onDismiss,
   });
   behavior.current = {
     value,
@@ -98,6 +101,7 @@ export function LocationSuggestInput({
     acceptSuggestion,
     onEmptyBackspace,
     onNavigate,
+    onDismiss,
   };
 
   useLayoutEffect(() => {
@@ -113,6 +117,7 @@ export function LocationSuggestInput({
       setFocused(false);
       if (current.open) current.acceptSuggestion();
       else current.commit(input.value);
+      current.onDismiss?.();
     }
     function onKeyDown(event: KeyboardEvent) {
       const current = behavior.current;

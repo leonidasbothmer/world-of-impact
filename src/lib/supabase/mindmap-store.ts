@@ -40,7 +40,7 @@ async function bumpRevision(db: Db): Promise<{ revision: number; updatedAt: stri
 async function upsertLayouts(
   db: Db,
   userId: string,
-  entries: { nodeId: string; x: number; y: number; pinned?: boolean }[],
+  entries: { nodeId: string; x: number; y: number }[],
 ) {
   if (entries.length === 0) return;
   const rows = entries.map((e) => ({
@@ -48,7 +48,8 @@ async function upsertLayouts(
     node_id: e.nodeId,
     x: e.x,
     y: e.y,
-    pinned: e.pinned ?? false,
+    // Column remains on node_layouts. Writes clear any pins left from before.
+    pinned: false,
     updated_at: new Date().toISOString(),
   }));
   const { error } = await db.from("node_layouts").upsert(rows);
@@ -270,7 +271,6 @@ async function writeNode(
         nodeId: node.id,
         x: node.position.x,
         y: node.position.y,
-        pinned: Boolean(node.pinned),
       },
     ]);
   }
@@ -542,68 +542,8 @@ async function applyOneAction(
         nodeId,
         x: pos.x,
         y: pos.y,
-        pinned: current.nodes.find((n) => n.id === nodeId)?.pinned,
       }));
-      // Preserve pinned flag from existing layouts when not in current.
-      const { data: existing } = await db
-        .from("node_layouts")
-        .select("node_id, pinned")
-        .eq("user_id", userId)
-        .in(
-          "node_id",
-          entries.map((e) => e.nodeId),
-        );
-      const pinnedById = new Map(
-        (existing ?? []).map((r) => [r.node_id as string, r.pinned as boolean]),
-      );
-      await upsertLayouts(
-        db,
-        userId,
-        entries.map((e) => ({
-          ...e,
-          pinned: e.pinned ?? pinnedById.get(e.nodeId) ?? false,
-        })),
-      );
-      Object.assign(current, applyMindMapActions(current, [action]));
-      return;
-    }
-    case "updatePin": {
-      const entries: {
-        nodeId: string;
-        x: number;
-        y: number;
-        pinned?: boolean;
-      }[] = [];
-      const target = current.nodes.find((n) => n.id === action.id);
-      const pos = action.position ?? target?.position ?? { x: 0, y: 0 };
-      entries.push({
-        nodeId: action.id,
-        x: pos.x,
-        y: pos.y,
-        pinned: action.pinned,
-      });
-      if (action.extraPositions) {
-        for (const [nodeId, p] of Object.entries(action.extraPositions)) {
-          if (nodeId === action.id) continue;
-          entries.push({
-            nodeId,
-            x: p.x,
-            y: p.y,
-            pinned: current.nodes.find((n) => n.id === nodeId)?.pinned,
-          });
-        }
-      }
       await upsertLayouts(db, userId, entries);
-      Object.assign(current, applyMindMapActions(current, [action]));
-      return;
-    }
-    case "unpinAll": {
-      const { error } = await db
-        .from("node_layouts")
-        .update({ pinned: false, updated_at: new Date().toISOString() })
-        .eq("user_id", userId)
-        .eq("pinned", true);
-      if (error) throw error;
       Object.assign(current, applyMindMapActions(current, [action]));
       return;
     }

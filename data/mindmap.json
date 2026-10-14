@@ -9,7 +9,6 @@
         "x": -1739.4918759237007,
         "y": 1080.5201737903403
       },
-      "pinned": false,
       "tags": [
         "climate",
         "impact"
@@ -24,7 +23,6 @@
         "x": -1883.7089896599907,
         "y": 968.0406590767559
       },
-      "pinned": false,
       "tags": [
         "climate",
         "adaptation"
@@ -39,7 +37,6 @@
         "x": -1392.2234224946885,
         "y": 1056.817091701842
       },
-      "pinned": false,
       "tags": [
         "climate",
         "mitigation"
@@ -54,7 +51,6 @@
         "x": -1044.1292776052085,
         "y": 1353.0516860775829
       },
-      "pinned": false,
       "locations": [],
       "tags": [
         "energy",
@@ -70,7 +66,6 @@
         "x": -1466.2850915514846,
         "y": 1160.8535356738103
       },
-      "pinned": false,
       "tags": [
         "buildings",
         "sector"
@@ -85,7 +80,6 @@
         "x": -1301.044392539999,
         "y": 1383.9345691603908
       },
-      "pinned": false,
       "tags": [
         "energy",
         "buildings"
@@ -114,7 +108,6 @@
         "x": -1597.1552225634882,
         "y": 823.3156750854347
       },
-      "pinned": false,
       "tags": [
         "cities",
         "urban"
@@ -129,7 +122,6 @@
         "x": -1858.6191458456842,
         "y": 2329.0912490375995
       },
-      "pinned": false,
       "tags": [
         "finance",
         "sector"
@@ -179,7 +171,6 @@
         "x": -1381.012661555015,
         "y": 1382.6200767854673
       },
-      "pinned": false,
       "tags": [
         "startup",
         "heating",
@@ -198,7 +189,6 @@
         "x": -1460.8448383586447,
         "y": 1377.6025124151492
       },
-      "pinned": false,
       "tags": [
         "startup",
         "buildings",
@@ -249,7 +239,6 @@
         "x": -852.4903738339841,
         "y": 1402.9231169827638
       },
-      "pinned": false,
       "tags": [
         "mobility",
         "startup"
@@ -264,7 +253,6 @@
         "x": -1262.919496956336,
         "y": 849.1588266412748
       },
-      "pinned": false,
       "tags": [
         "mobility",
         "climate",
@@ -280,7 +268,6 @@
         "x": -1781.3356791193683,
         "y": 831.1610519630282
       },
-      "pinned": false,
       "tags": [
         "cities",
         "climate",
@@ -296,7 +283,6 @@
       "website": "https://www.opensystemslab.io/",
       "linkedIn": "https://www.linkedin.com/company/open-systems-lab/",
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFzsOCG6-357Q/company-logo_200_200/company-logo_200_200/0/1662483549293/open_systems_lab_logo?e=2147483647&v=beta&t=uToRt4XKLkJK-aSXyAExJe_osePhhiSWrGqA1aUQQNM",
-      "pinned": false,
       "position": {
         "x": -1549.6524447746312,
         "y": 990.2260853791678
@@ -317,7 +303,6 @@
       "website": "https://nature-wealth.org/",
       "linkedIn": "https://www.linkedin.com/company/nature-wealth",
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4D0BAQGi1Bl1A0sHKg/company-logo_200_200/B4DZeCkQl2HAAI-/0/1750242233132/nature_wealth_logo?e=2147483647&v=beta&t=cfGTCe26PgOyXJqHnQp_BshpZPc7MwktU-OqjmAylnc",
-      "pinned": false,
       "position": {
         "x": -2200.3769684208155,
         "y": 2081.0552458411657
@@ -396,7 +381,6 @@
         "x": -899.2935083222603,
         "y": 1885.6079082687945
       },
-      "pinned": false,
       "tags": [
         "climate",
         "startup"
@@ -442,7 +426,6 @@
         "x": -1961.744008896926,
         "y": 1459.8346641647418
       },
-      "pinned": false,
       "tags": [
         "biodiversity",
         "climate"
@@ -484,8 +467,7 @@
       "position": {
         "x": -1399.5276675902635,
         "y": 1590.579107674367
-      },
-      "pinned": false
+      }
     },
     {
       "id": "nomos-1789461225070",
@@ -495,8 +477,7 @@
       "position": {
         "x": -1184.9515416037905,
         "y": 1536.3560487289367
-      },
-      "pinned": false
+      }
     },
     {
       "id": "1komma5-1789461305372",
@@ -617,7 +598,6 @@
         "x": -2010.7813116543332,
         "y": 1158.119894850748
       },
-      "pinned": false,
       "tags": [
         "climate",
         "tech"
@@ -641,8 +621,7 @@
       "position": {
         "x": -1135.6018075073875,
         "y": 1242.3491671297293
-      },
-      "pinned": false
+      }
     },
     {
       "id": "car-sharing-1789462657756",
@@ -692,8 +671,7 @@
       "position": {
         "x": -788.4051551799794,
         "y": 487.0158815766809
-      },
-      "pinned": false
+      }
     },
     {
       "id": "bolt-1789462812740",
@@ -703,8 +681,7 @@
       "position": {
         "x": -703.415975018404,
         "y": 327.22360295400136
-      },
-      "pinned": false
+      }
     },
     {
       "id": "public-transport-1789462833694",
@@ -715,7 +692,6 @@
         "x": -1136.428767841012,
         "y": 720.085108158894
       },
-      "pinned": false,
       "tags": [
         "ÖPNV"
       ]
@@ -728,8 +704,7 @@
       "position": {
         "x": -821.6020041300521,
         "y": 1027.6791815849544
-      },
-      "pinned": false
+      }
     },
     {
       "id": "night-trains-1789463059254",
@@ -740,7 +715,6 @@
         "x": -1009.5092747655256,
         "y": 1076.664823651299
       },
-      "pinned": false,
       "tags": [
         "emissions"
       ]
@@ -763,8 +737,7 @@
       "position": {
         "x": -1519.7363780377443,
         "y": -115.21937887498972
-      },
-      "pinned": false
+      }
     },
     {
       "id": "surveillance-capitalism-1789464815207",
@@ -774,8 +747,7 @@
       "position": {
         "x": -1443.8118192928973,
         "y": -299.79876378417435
-      },
-      "pinned": false
+      }
     },
     {
       "id": "sustainable-cities-1789465064288",
@@ -785,8 +757,7 @@
       "position": {
         "x": -1491.2391228728122,
         "y": 705.4269440606985
-      },
-      "pinned": false
+      }
     },
     {
       "id": "berlin-21-1789465072299",
@@ -796,8 +767,7 @@
       "position": {
         "x": -1403.7315010000918,
         "y": 542.7040020055182
-      },
-      "pinned": false
+      }
     },
     {
       "id": "fairphone-1789465190628",
@@ -818,7 +788,6 @@
         "x": -1451.557210406643,
         "y": 1769.2116447937708
       },
-      "pinned": false,
       "website": "https://vrey.io/"
     },
     {
@@ -829,8 +798,7 @@
       "position": {
         "x": -1641.78428219139,
         "y": 1258.626049184677
-      },
-      "pinned": false
+      }
     },
     {
       "id": "varm-1789465298781",
@@ -840,8 +808,7 @@
       "position": {
         "x": -1763.4290640389102,
         "y": 1401.8161593589246
-      },
-      "pinned": false
+      }
     },
     {
       "id": "irights-lab",
@@ -898,7 +865,6 @@
         "x": -1651.05008486222,
         "y": 232.37478695602138
       },
-      "pinned": false,
       "tags": [
         "govtech",
         "public-innovation",
@@ -977,7 +943,6 @@
         "x": 470.8969324050006,
         "y": 2453.0463275394086
       },
-      "pinned": false,
       "locations": []
     },
     {
@@ -1000,7 +965,6 @@
         "x": -1983.4124212624363,
         "y": -182.15826200856782
       },
-      "pinned": false,
       "linkedIn": "https://www.linkedin.com/company/global-government-technology-centre/posts/?feedView=all",
       "imageUrl": "https://media.licdn.com/dms/image/v2/D4E0BAQFY-ckNX2y7GA/company-logo_200_200/company-logo_200_200/0/1727097248253/global_government_technology_centre_logo?e=1791417600&v=beta&t=--7sAsl4PJ5ELHQss-3ayJwwFUgvGqdSvh2B4Yr2cR8"
     },
@@ -1072,7 +1036,6 @@
         "x": 438.8887051957437,
         "y": 1834.4572047216207
       },
-      "pinned": false,
       "locations": []
     },
     {
@@ -1084,7 +1047,6 @@
         "x": 712.9830484427351,
         "y": 1799.1039216774236
       },
-      "pinned": false,
       "locations": []
     },
     {
@@ -1095,8 +1057,7 @@
       "position": {
         "x": 340.21189464048234,
         "y": 2254.2758475686014
-      },
-      "pinned": false
+      }
     },
     {
       "id": "open-source-1790090297399",
@@ -1107,7 +1068,6 @@
         "x": 190.93517045226997,
         "y": 2024.1760336209875
       },
-      "pinned": false,
       "locations": []
     },
     {
@@ -1118,8 +1078,7 @@
       "position": {
         "x": 252.1965178508257,
         "y": 2185.802227433777
-      },
-      "pinned": false
+      }
     },
     {
       "id": "thermondo-1790090370396",
@@ -1136,7 +1095,6 @@
         "x": -1122.1093594092636,
         "y": 1370.913708554293
       },
-      "pinned": false,
       "tags": [
         "heating",
         "heat-pump",
@@ -1221,7 +1179,6 @@
         "x": 625.3397121802394,
         "y": 1907.2125285255192
       },
-      "pinned": false,
       "tags": [
         "platforms",
         "attention",
@@ -1265,7 +1222,6 @@
         "x": -274.09375961558453,
         "y": 1596.7857131050616
       },
-      "pinned": false,
       "tags": [
         "defense",
         "security"
@@ -1491,8 +1447,7 @@
       "position": {
         "x": -1762.0622828743817,
         "y": 1674.3584990529137
-      },
-      "pinned": false
+      }
     },
     {
       "id": "sustainable-e-commerce-1791457435353",
@@ -1502,8 +1457,7 @@
       "position": {
         "x": -1565.8728167202119,
         "y": 1336.1550414817668
-      },
-      "pinned": false
+      }
     },
     {
       "id": "enpal-1791457797698",
@@ -1513,8 +1467,7 @@
       "position": {
         "x": -1363.1586250253213,
         "y": 1776.5728015999823
-      },
-      "pinned": false
+      }
     },
     {
       "id": "gropyus-1791458493193",
@@ -1554,8 +1507,7 @@
       "position": {
         "x": -2077.1882363313425,
         "y": -97.72498300753803
-      },
-      "pinned": false
+      }
     }
   ],
   "edges": [

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SquareArrowOutUpRight, X } from "lucide-react";
+import { Plus, SquareArrowOutUpRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,7 @@ export function OrgTable({
   const [query, setQuery] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
   const locationCatalog = useMemo(() => collectLocations(nodes), [nodes]);
@@ -118,7 +119,7 @@ export function OrgTable({
     if (willLeaveList) {
       const index = rows.findIndex((row) => row.id === node.id);
       const following = rows[index + 1]?.id ?? rows[index - 1]?.id;
-      if (following) setFocusId(following);
+      if (following) openAdder(following);
     }
     onChangeLocations(node.id, (current) => appendLocation(current, raw) ?? current);
   }
@@ -129,10 +130,15 @@ export function OrgTable({
     );
   }
 
+  function openAdder(id: string) {
+    setAddingId(id);
+    setFocusId(id);
+  }
+
   function moveFocus(id: string, delta: number) {
     const index = rows.findIndex((row) => row.id === id);
     const next = rows[index + delta];
-    if (next) setFocusId(next.id);
+    if (next) openAdder(next.id);
   }
 
   return (
@@ -219,7 +225,7 @@ export function OrgTable({
                         const target = event.target as HTMLElement;
                         if (target.closest("button, input")) return;
                         event.preventDefault();
-                        inputRefs.current.get(node.id)?.focus();
+                        openAdder(node.id);
                       }}
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -227,12 +233,12 @@ export function OrgTable({
                           <Badge
                             key={location}
                             variant="secondary"
-                            className="pr-1"
+                            className="relative"
                           >
                             {location}
                             <button
                               type="button"
-                              className="rounded-full p-0.5 hover:bg-foreground/10"
+                              className="absolute inset-y-0 right-0 flex w-7 items-center justify-end bg-[linear-gradient(to_right,transparent,var(--secondary)_46%,var(--secondary))] pr-1 opacity-0 transition-opacity group-hover/badge:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                               aria-label={`Remove ${location} from ${node.name}`}
                               onClick={() => removeLocation(node, location)}
                             >
@@ -240,26 +246,42 @@ export function OrgTable({
                             </button>
                           </Badge>
                         ))}
-                        <LocationSuggestInput
-                          value={draft}
-                          onChange={(value) => setDraft(node.id, value)}
-                          onCommit={(value) => addLocation(node, value)}
-                          catalog={locationCatalog}
-                          taken={locations}
-                          aria-label={`Add location for ${node.name}`}
-                          placeholder="Add location"
-                          className="h-7 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
-                          wrapperClassName="w-36"
-                          inputRef={(element) => {
-                            if (element) inputRefs.current.set(node.id, element);
-                            else inputRefs.current.delete(node.id);
-                          }}
-                          onEmptyBackspace={() => {
-                            const last = locations[locations.length - 1];
-                            if (last) removeLocation(node, last);
-                          }}
-                          onNavigate={(delta) => moveFocus(node.id, delta)}
-                        />
+                        {addingId === node.id ? (
+                          <LocationSuggestInput
+                            value={draft}
+                            onChange={(value) => setDraft(node.id, value)}
+                            onCommit={(value) => addLocation(node, value)}
+                            catalog={locationCatalog}
+                            taken={locations}
+                            aria-label={`Add location for ${node.name}`}
+                            placeholder="Add location"
+                            className="h-5 rounded-full border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0 md:text-xs dark:bg-transparent"
+                            wrapperClassName="w-36"
+                            inputRef={(element) => {
+                              if (element) inputRefs.current.set(node.id, element);
+                              else inputRefs.current.delete(node.id);
+                            }}
+                            onEmptyBackspace={() => {
+                              const last = locations[locations.length - 1];
+                              if (last) removeLocation(node, last);
+                            }}
+                            onNavigate={(delta) => moveFocus(node.id, delta)}
+                            onDismiss={() => {
+                              setAddingId((current) =>
+                                current === node.id ? null : current,
+                              );
+                            }}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            aria-label={`Add location for ${node.name}`}
+                            className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            onClick={() => openAdder(node.id)}
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                        )}
                       </div>
                     </td>
                     {TEXT_FIELDS.map((field) => (
