@@ -1,5 +1,5 @@
 import type { MindMapEdge, MindMapNode, NodeType } from "@/types/mindmap";
-import { PRIVATE_TAGS } from "@/lib/mindmap-split";
+import { isPrivateTag } from "@/lib/mindmap-split";
 
 export type SharedNodeRow = {
   id: string;
@@ -120,7 +120,7 @@ export function edgeRowToMindMap(
 }
 
 export function mindMapNodeToSharedRow(node: MindMapNode): SharedNodeRow {
-  const publicTags = (node.tags ?? []).filter((t) => !PRIVATE_TAGS.has(t));
+  const publicTags = (node.tags ?? []).filter((t) => !isPrivateTag(t));
   return {
     id: node.id,
     name: node.name,
@@ -151,7 +151,7 @@ export function mindMapNodeToPrivateRow(node: MindMapNode): PrivateNodeRow {
 export function extractContactDetails(
   node: MindMapNode,
 ): ContactDetailsRow | null {
-  const privateTags = (node.tags ?? []).filter((t) => PRIVATE_TAGS.has(t));
+  const privateTags = (node.tags ?? []).filter((t) => isPrivateTag(t));
   if (
     !node.email &&
     !node.phone &&

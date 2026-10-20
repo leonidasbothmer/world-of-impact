@@ -52,10 +52,12 @@ import {
 } from "@/lib/orbit-layout";
 import {
   problemFlowMemberIds,
+  problemFlowPathIds,
   problemFlowPositions,
   type FlowColumnLabel,
 } from "@/lib/problem-flow";
 import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
+import { isHidden } from "@/lib/node-hide";
 import { visibleNodeIds } from "@/lib/visible-nodes";
 import { cn } from "@/lib/utils";
 import type {
@@ -144,6 +146,14 @@ function edgeStyle(
       opacity: 1,
     };
   }
+  if (highlight === "path") {
+    return {
+      ...dashed,
+      strokeWidth: social ? 1.75 : 2.25,
+      stroke: "var(--primary)",
+      opacity: 1,
+    };
+  }
   if (highlight === "neighbor") {
     return {
       ...dashed,
@@ -179,9 +189,10 @@ function nodeFocusStyle(
   edgeFocused = false,
   type?: NodeType,
 ) {
+  const onPath = highlight === "neighbor" || highlight === "path" || highlight === "endpoint";
   const dimmed = edgeFocused
     ? highlight !== "endpoint"
-    : Boolean(selectedId) && nodeId !== selectedId && highlight !== "neighbor";
+    : Boolean(selectedId) && nodeId !== selectedId && !onPath;
   return {
     opacity: dimmed ? 0.4 : 1,
     transition: "opacity 150ms ease",
@@ -195,12 +206,14 @@ function toFlowNodes(
   neighbors: Set<string>,
   endpoints?: ReadonlySet<string>,
   revealAll = false,
+  pathHighlight = false,
 ): Node[] {
   const edgeFocused = !revealAll && Boolean(endpoints && endpoints.size > 0);
   const focusId = revealAll ? null : selectedId;
   return nodes.map((node) => {
     const selected = node.id === selectedId;
-    const highlight = nodeHighlight(node.id, focusId, neighbors, endpoints);
+    const base = nodeHighlight(node.id, focusId, neighbors, endpoints);
+    const highlight = pathHighlight && base === "neighbor" ? "path" : base;
     return {
       id: node.id,
       type: "mindmap",
@@ -219,16 +232,22 @@ function toFlowEdges(
   selectedId: string | null,
   selectedEdgeId: string | null = null,
   revealAll = false,
+  pathIds: Set<string> | null = null,
 ): Edge[] {
   const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
   const focusId = revealAll ? null : selectedId;
-  const focused = !revealAll && (Boolean(selectedId) || Boolean(selectedEdgeId));
+  const focused =
+    !revealAll && (Boolean(selectedId) || Boolean(selectedEdgeId) || Boolean(pathIds));
   return edges.map((edge) => {
     const social = isPersonPersonEdge(edge, byId);
     const selected = edge.id === selectedEdgeId;
     const highlight = selected
       ? undefined
-      : edgeHighlight(edge.source, edge.target, focusId);
+      : pathIds
+        ? pathIds.has(edge.source) && pathIds.has(edge.target)
+          ? ("path" as const)
+          : undefined
+        : edgeHighlight(edge.source, edge.target, focusId);
     return {
       id: edge.id,
       source: edge.source,
@@ -241,7 +260,7 @@ function toFlowEdges(
       selectable: true,
       selected,
       style: edgeStyle(social, highlight, focused, selected),
-      zIndex: selected ? 5 : highlight === "neighbor" ? 3 : 0,
+      zIndex: selected ? 5 : highlight === "path" || highlight === "neighbor" ? 3 : 0,
     };
   });
 }
@@ -330,7 +349,17 @@ const ORBIT_MS = 650;
 
 type FocalLens = "network" | "problem-flow";
 
-function boundsCenter(targets: Map<string, OrbitPoint>, nodes: Node[]): OrbitPoint {
+function nodeExtent(node: Node | undefined) {
+  return {
+    width: node?.measured?.width || 96,
+    height: node?.measured?.height || 48,
+  };
+}
+
+function boundsCenter(
+  targets: Map<string, OrbitPoint>,
+  nodes: Node[],
+): OrbitPoint {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   let minX = Infinity;
   let minY = Infinity;
@@ -338,8 +367,7 @@ function boundsCenter(targets: Map<string, OrbitPoint>, nodes: Node[]): OrbitPoi
   let maxY = -Infinity;
   for (const [id, pos] of targets) {
     const node = byId.get(id);
-    const width = node?.measured?.width || 96;
-    const height = node?.measured?.height || 72;
+    const { width, height } = nodeExtent(node);
     minX = Math.min(minX, pos.x);
     minY = Math.min(minY, pos.y);
     maxX = Math.max(maxX, pos.x + width);
@@ -413,22 +441,30 @@ function MindMapGraphInner({
       (node) => node.type === "problem" && problemFlowIds.has(node.id),
     );
   const visibleIds = useMemo(() => {
+    let ids: Set<string>;
     if (orbitId && focalLens === "problem-flow" && tracesToProblem) {
-      return problemFlowIds;
+      ids = new Set(problemFlowIds);
+    } else if (orbitId) {
+      ids = new Set(orbitMemberIds(data.nodes, data.edges, orbitId));
+    } else {
+      ids = visibleNodeIds(
+        data.nodes,
+        data.edges,
+        hiddenTypes,
+        selectedNodeId,
+      );
+      if (focusFilterIds) {
+        const next = new Set<string>();
+        for (const id of ids) {
+          if (focusFilterIds.has(id) || id === selectedNodeId) next.add(id);
+        }
+        ids = next;
+      }
     }
-    if (orbitId) return orbitMemberIds(data.nodes, data.edges, orbitId);
-    const byType = visibleNodeIds(
-      data.nodes,
-      data.edges,
-      hiddenTypes,
-      selectedNodeId,
-    );
-    if (!focusFilterIds) return byType;
-    const next = new Set<string>();
-    for (const id of byType) {
-      if (focusFilterIds.has(id) || id === selectedNodeId) next.add(id);
+    for (const node of data.nodes) {
+      if (isHidden(node)) ids.delete(node.id);
     }
-    return next;
+    return ids;
   }, [
     data,
     hiddenTypes,
@@ -507,8 +543,16 @@ function MindMapGraphInner({
     };
   }, []);
 
+  const layoutData = useMemo(() => {
+    const ids = visibleNodeIds(data.nodes, data.edges, hiddenTypes);
+    for (const node of data.nodes) {
+      if (isHidden(node)) ids.delete(node.id);
+    }
+    return shownGraph(data, ids);
+  }, [data, hiddenTypes]);
+
   const force = useForceLayout({
-    data,
+    data: layoutData,
     setNodes,
     onSettled: (positions) => {
       persistPositions(positions);
@@ -576,8 +620,7 @@ function MindMapGraphInner({
     let maxY = -Infinity;
     for (const [id, pos] of targets) {
       const node = byId.get(id);
-      const width = node?.measured?.width || 96;
-      const height = node?.measured?.height || 48;
+      const { width, height } = nodeExtent(node);
       minX = Math.min(minX, pos.x);
       minY = Math.min(minY, pos.y);
       maxX = Math.max(maxX, pos.x + width);
@@ -671,18 +714,27 @@ function MindMapGraphInner({
     const leavingOrbit = orbitingRef.current && !orbitId;
     orbitingRef.current = orbitId != null;
     const view = shownGraph(data, visibleIds);
-    const revealAll = focalLensRef.current === "problem-flow";
-    const focusId = revealAll ? null : selectedNodeId;
+    const inFlow = focalLensRef.current === "problem-flow";
+    const pathIds =
+      inFlow && selectedNodeId
+        ? problemFlowPathIds(data.nodes, data.edges, selectedNodeId)
+        : null;
+    const showAll = inFlow && pathIds == null;
+    const focusId = showAll ? null : selectedNodeId;
+    const highlightNeighbors = pathIds
+      ? new Set([...pathIds].filter((id) => id !== selectedNodeId))
+      : nextNeighbors;
     if (viewKey === viewKeyRef.current) {
       setNodes((current) =>
         current.map((n) => {
           const selected = n.id === selectedNodeId;
-          const highlight = nodeHighlight(
+          const base = nodeHighlight(
             n.id,
             focusId,
-            nextNeighbors,
+            highlightNeighbors,
             endpoints,
           );
+          const highlight = pathIds && base === "neighbor" ? "path" : base;
           const source =
             data.nodes.find((dn) => dn.id === n.id) ??
             (n.data as { node: MindMapNode }).node;
@@ -694,7 +746,7 @@ function MindMapGraphInner({
               focusId,
               n.id,
               highlight,
-              !revealAll && endpoints.size > 0,
+              !showAll && endpoints.size > 0,
               source.type,
             ),
             data: {
@@ -718,7 +770,8 @@ function MindMapGraphInner({
           view.nodes,
           selectedNodeId,
           edgeId,
-          revealAll,
+          showAll,
+          pathIds,
         );
       });
       return;
@@ -744,13 +797,21 @@ function MindMapGraphInner({
       return toFlowNodes(
         nodes,
         selectedNodeId,
-        nextNeighbors,
+        highlightNeighbors,
         endpoints,
-        revealAll,
+        showAll,
+        pathIds != null,
       );
     });
     setEdges(
-      toFlowEdges(view.edges, view.nodes, selectedNodeId, edgeId, revealAll),
+      toFlowEdges(
+        view.edges,
+        view.nodes,
+        selectedNodeId,
+        edgeId,
+        showAll,
+        pathIds,
+      ),
     );
   }, [data, orbitId, selectedEdgeId, selectedNodeId, setNodes, setEdges, viewKey, visibleIds]);
 
@@ -796,6 +857,7 @@ function MindMapGraphInner({
             typeById,
             names,
             centerId,
+            dataRef.current.edges,
           );
           setFlowColumns(layout.columns);
           animatePositions(layout.positions);
@@ -1267,9 +1329,9 @@ function FlowColumnLabels({ columns }: { columns: FlowColumnLabel[] }) {
   if (!finite || columns.length === 0) return null;
   return (
     <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden">
-      {columns.map((column) => (
+      {columns.map((column, index) => (
         <div
-          key={column.type}
+          key={`${column.type}-${index}`}
           className="absolute text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
           style={{
             left: column.x * zoom + x,
@@ -1304,7 +1366,7 @@ function FocalLensBar({
       id: "problem-flow" as const,
       label: "Problem flow",
       title: tracesToProblem
-        ? "Problem, solution, organization, then person — traced back to the problem"
+        ? "Problem, each solution generation, organizations, then people"
         : "Only useful when this node traces back to a problem",
       enabled: tracesToProblem,
     },

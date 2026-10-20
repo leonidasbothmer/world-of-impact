@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import {
   applicationActivity,
   formatTrackDate,
+  formatTrackDateRange,
   type ActivityGrain,
   type ActivityPoint,
 } from "@/lib/tracking";
@@ -18,23 +19,48 @@ const PLOT_INNER = PLOT_HEIGHT - PAD_TOP - PAD_BOTTOM;
 
 type ActivityMode = "cumulative" | "new";
 
+/** Inclusive calendar days, YYYY-MM-DD. */
+export type ActivityDateRange = {
+  from: string;
+  to: string;
+};
+
+type ActivityCounts = {
+  sent: number;
+  pool: number;
+  denied: number;
+  open: number;
+};
+
 /** Counts drawn for one bar. New mode is the change since the previous bar. */
 function valuesAt(
   points: ActivityPoint[],
   index: number,
   mode: ActivityMode,
-): { sent: number; denied: number } {
+): ActivityCounts {
   const point = points[index];
-  if (!point) return { sent: 0, denied: 0 };
-  if (mode === "cumulative") return { sent: point.sent, denied: point.denied };
+  if (!point) return { sent: 0, pool: 0, denied: 0, open: 0 };
+  if (mode === "cumulative") {
+    return { sent: point.sent, pool: point.pool, denied: point.denied, open: point.open };
+  }
   const previous = index > 0 ? points[index - 1] : undefined;
   return {
     sent: point.sent - (previous?.sent ?? 0),
+    pool: point.pool - (previous?.pool ?? 0),
     denied: point.denied - (previous?.denied ?? 0),
+    open: point.open - (previous?.open ?? 0),
   };
 }
 
-export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
+export function ApplicationChartSection({
+  nodes,
+  dateRange,
+  onDateRange,
+}: {
+  nodes: MindMapNode[];
+  dateRange: ActivityDateRange | null;
+  onDateRange: (range: ActivityDateRange) => void;
+}) {
   const [open, setOpen] = useState(false);
   const summary = useMemo(() => applicationActivity(nodes, "day").at(-1), [nodes]);
 
@@ -58,6 +84,9 @@ export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
             <span className="font-normal text-green-700 dark:text-green-400">
               {summary.sent} sent
             </span>
+            <span className="font-normal text-purple-700 dark:text-purple-400">
+              {summary.pool} talent pool
+            </span>
             <span className="font-normal text-red-700 dark:text-red-400">
               {summary.denied} denied
             </span>
@@ -74,7 +103,12 @@ export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
       >
         <div className="min-w-0 overflow-hidden" inert={!open}>
           <div className="min-w-0 border-t py-3">
-            <ApplicationChart nodes={nodes} visible={open} />
+            <ApplicationChart
+              nodes={nodes}
+              visible={open}
+              dateRange={dateRange}
+              onDateRange={onDateRange}
+            />
           </div>
         </div>
       </div>
@@ -85,13 +119,18 @@ export function ApplicationChartSection({ nodes }: { nodes: MindMapNode[] }) {
 function ApplicationChart({
   nodes,
   visible,
+  dateRange,
+  onDateRange,
 }: {
   nodes: MindMapNode[];
   visible: boolean;
+  dateRange: ActivityDateRange | null;
+  onDateRange: (range: ActivityDateRange) => void;
 }) {
   const [grain, setGrain] = useState<ActivityGrain>("day");
   const [mode, setMode] = useState<ActivityMode>("new");
   const [showSent, setShowSent] = useState(true);
+  const [showPool, setShowPool] = useState(true);
   const [showDenied, setShowDenied] = useState(true);
   const [active, setActive] = useState<number | null>(null);
   const points = useMemo(
@@ -99,13 +138,34 @@ function ApplicationChart({
     [nodes, grain],
   );
   const latest = points.at(-1);
-  const selected =
-    active != null && active >= 0 && active < points.length
-      ? active
+  const hovering = active != null && active >= 0 && active < points.length;
+  const rangeSpan = useMemo(
+    () => overlappingSpan(points, dateRange),
+    [points, dateRange],
+  );
+  const readout = hovering
+    ? active
+    : rangeSpan
+      ? rangeSpan.end
       : Math.max(0, points.length - 1);
-  const point = points[selected];
-  const shown = valuesAt(points, selected, mode);
-  const added = valuesAt(points, selected, "new");
+  const point = points[readout];
+  const rangeTotals =
+    !hovering && rangeSpan ? sumNew(points, rangeSpan.start, rangeSpan.end) : null;
+  const shown =
+    rangeTotals && rangeSpan
+      ? mode === "new"
+        ? rangeTotals
+        : valuesAt(points, rangeSpan.end, "cumulative")
+      : valuesAt(points, readout, mode);
+  const added = rangeTotals ?? valuesAt(points, readout, "new");
+  const readoutLabel =
+    !hovering && dateRange && rangeSpan
+      ? formatTrackDateRange(dateRange.from, dateRange.to)
+      : point
+        ? grain === "week"
+          ? `Week of ${formatTrackDate(point.start)}`
+          : formatTrackDate(point.through)
+        : "";
 
   return (
     <div className="flex min-w-0 flex-col gap-3 px-4">
@@ -178,6 +238,13 @@ function ApplicationChart({
             onClick={() => setShowSent((current) => !current)}
           />
           <LegendButton
+            label="Talent pool"
+            count={latest?.pool}
+            pressed={showPool}
+            swatch="bg-purple-500"
+            onClick={() => setShowPool((current) => !current)}
+          />
+          <LegendButton
             label="Denied"
             count={latest?.denied}
             pressed={showDenied}
@@ -193,33 +260,35 @@ function ApplicationChart({
             ? "Each bar is the running total through that day."
             : "Each bar is the running total through the end of that week."
           : grain === "day"
-            ? "Each bar is only what was new that day. Sent and denied stack."
-            : "Each bar is only what was new that week. Sent and denied stack."}
-        {mode === "cumulative" && showSent && showDenied
-          ? " Red is the share that has been denied."
-          : ""}
+            ? "Each bar is only what was new that day. Sent, talent pool, and denied stack."
+            : "Each bar is only what was new that week. Sent, talent pool, and denied stack."}
+        {outcomeCaption(mode, showSent, showPool, showDenied)}
+        {" "}
+        Click or drag to filter the list to those days.
       </p>
 
       {points.length === 0 ? (
         <div className="flex h-[232px] items-center justify-center text-center text-xs text-muted-foreground">
-          Applications show up here once they have an applied date.
+          Applications show up here once they are sent or moved to the talent pool.
         </div>
-      ) : !showSent && !showDenied ? (
+      ) : !showSent && !showPool && !showDenied ? (
         <div className="flex h-[232px] items-center justify-center text-center text-xs text-muted-foreground">
-          Turn Sent or Denied back on to see the chart.
+          Turn Sent, Talent pool, or Denied back on to see the chart.
         </div>
       ) : (
         <>
           <p className="flex h-5 flex-wrap items-baseline gap-x-3 text-xs" aria-live="polite">
-            <span className="font-medium text-foreground">
-              {grain === "week"
-                ? `Week of ${formatTrackDate(point.start)}`
-                : formatTrackDate(point.through)}
-            </span>
+            <span className="font-medium text-foreground">{readoutLabel}</span>
             {showSent ? (
               <span className="text-green-700 dark:text-green-400">
                 {shown.sent} sent
                 {mode === "cumulative" ? <Gain value={added.sent} /> : null}
+              </span>
+            ) : null}
+            {showPool ? (
+              <span className="text-purple-700 dark:text-purple-400">
+                {shown.pool} talent pool
+                {mode === "cumulative" ? <Gain value={added.pool} /> : null}
               </span>
             ) : null}
             {showDenied ? (
@@ -234,11 +303,22 @@ function ApplicationChart({
             grain={grain}
             mode={mode}
             showSent={showSent}
+            showPool={showPool}
             showDenied={showDenied}
-            selected={selected}
+            selected={readout}
+            hoverIndex={hovering ? active : null}
+            rangeSpan={rangeSpan}
             visible={visible}
             onSelect={(index) => {
               setActive((current) => (current === index ? current : index));
+            }}
+            onRange={(start, end) => {
+              const fromIndex = Math.min(start, end);
+              const toIndex = Math.max(start, end);
+              const from = points[fromIndex]?.start;
+              const to = points[toIndex]?.through;
+              if (!from || !to) return;
+              onDateRange(from <= to ? { from, to } : { from: to, to: from });
             }}
           />
         </>
@@ -283,6 +363,60 @@ function Gain({ value }: { value: number }) {
   return <span className="text-muted-foreground"> (+{value})</span>;
 }
 
+function sumNew(
+  points: ActivityPoint[],
+  start: number,
+  end: number,
+): ActivityCounts {
+  let sent = 0;
+  let pool = 0;
+  let denied = 0;
+  let open = 0;
+  for (let index = start; index <= end; index += 1) {
+    const added = valuesAt(points, index, "new");
+    sent += added.sent;
+    pool += added.pool;
+    denied += added.denied;
+    open += added.open;
+  }
+  return { sent, pool, denied, open };
+}
+
+function outcomeCaption(
+  mode: ActivityMode,
+  showSent: boolean,
+  showPool: boolean,
+  showDenied: boolean,
+): string {
+  if (mode !== "cumulative" || !showSent) return "";
+  if (showPool && showDenied) {
+    return " Purple is the share in the talent pool, and red is the share that has been denied.";
+  }
+  if (showPool) return " Purple is the share in the talent pool.";
+  if (showDenied) return " Red is the share that has been denied.";
+  return "";
+}
+
+/** Bars whose day or week overlaps the inclusive filter. */
+function overlappingSpan(
+  points: ActivityPoint[],
+  range: ActivityDateRange | null,
+): { start: number; end: number } | null {
+  if (!range || points.length === 0) return null;
+  const from = range.from <= range.to ? range.from : range.to;
+  const to = range.from <= range.to ? range.to : range.from;
+  let start = -1;
+  let end = -1;
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index];
+    if (point.through < from || point.start > to) continue;
+    if (start === -1) start = index;
+    end = index;
+  }
+  if (start === -1) return null;
+  return { start, end };
+}
+
 function axisScale(maxValue: number): { max: number; ticks: number[] } {
   const value = Math.max(1, maxValue);
   const raw = value <= 4 ? 1 : value / 4;
@@ -305,21 +439,30 @@ function ActivityPlot({
   grain,
   mode,
   showSent,
+  showPool,
   showDenied,
   selected,
+  hoverIndex,
+  rangeSpan,
   visible,
   onSelect,
+  onRange,
 }: {
   points: ActivityPoint[];
   grain: ActivityGrain;
   mode: ActivityMode;
   showSent: boolean;
+  showPool: boolean;
   showDenied: boolean;
   selected: number;
+  hoverIndex: number | null;
+  rangeSpan: { start: number; end: number } | null;
   visible: boolean;
-  onSelect: (index: number) => void;
+  onSelect: (index: number | null) => void;
+  onRange: (start: number, end: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ anchor: number; pointerId: number } | null>(null);
   const clipPrefix = useId().replace(/:/g, "");
   const [width, setWidth] = useState(0);
 
@@ -353,15 +496,8 @@ function ActivityPlot({
 
   const bars = points.map((point, index) => {
     const values = valuesAt(points, index, mode);
-    const denied = showDenied ? values.denied : 0;
-    const sent = showSent
-      ? mode === "new"
-        ? values.sent
-        : showDenied
-          ? Math.max(0, values.sent - values.denied)
-          : values.sent
-      : 0;
-    return { ...point, sentHeight: sent, deniedHeight: denied, total: sent + denied };
+    const heights = barHeights(values, mode, showSent, showPool, showDenied);
+    return { ...point, ...heights, total: heights.sentHeight + heights.poolHeight + heights.deniedHeight };
   });
   const { max: axisMax, ticks } = axisScale(Math.max(...bars.map((bar) => bar.total), 0));
   const axisWidth = axisMax >= 100 ? 40 : 32;
@@ -383,15 +519,13 @@ function ActivityPlot({
     return PAD_TOP + ((axisMax - value) / axisMax) * PLOT_INNER;
   }
 
-  function selectFromClientX(clientX: number) {
+  function indexFromClientX(clientX: number): number | null {
     const node = scrollRef.current?.querySelector("svg");
-    if (!node) return;
+    if (!node || points.length === 0) return null;
     const rect = node.getBoundingClientRect();
-    const index = Math.min(
-      points.length - 1,
-      Math.max(0, Math.floor((clientX - rect.left) / slot)),
-    );
-    onSelect(index);
+    if (rect.width <= 0) return null;
+    const index = Math.floor(((clientX - rect.left) / rect.width) * points.length);
+    return Math.min(points.length - 1, Math.max(0, index));
   }
 
   function move(next: number) {
@@ -431,11 +565,11 @@ function ActivityPlot({
       <div
         ref={scrollRef}
         tabIndex={0}
-        className="min-w-0 flex-1 overflow-x-auto outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="min-w-0 flex-1 touch-pan-y overflow-x-auto outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50"
         aria-label={
           grain === "day"
-            ? "Applications by day. Use the left and right arrow keys to move between days."
-            : "Applications by week. Use the left and right arrow keys to move between weeks."
+            ? "Applications by day. Click or drag to filter those days. Arrow keys move between days."
+            : "Applications by week. Click or drag to filter those weeks. Arrow keys move between weeks."
         }
         onKeyDown={(event) => {
           if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -444,11 +578,36 @@ function ActivityPlot({
         }}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
-          selectFromClientX(event.clientX);
+          const index = indexFromClientX(event.clientX);
+          if (index == null) return;
+          dragRef.current = { anchor: index, pointerId: event.pointerId };
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+          } catch {
+            // Capture fails if the pointer is already gone. The drag still tracks moves.
+          }
+          onSelect(index);
+          onRange(index, index);
         }}
         onPointerMove={(event) => {
-          if (event.pointerType !== "mouse") return;
-          selectFromClientX(event.clientX);
+          const drag = dragRef.current;
+          if (drag && drag.pointerId === event.pointerId) {
+            const index = indexFromClientX(event.clientX);
+            if (index == null) return;
+            onRange(drag.anchor, index);
+            onSelect(index === drag.anchor ? index : null);
+            return;
+          }
+          if (event.pointerType !== "mouse" || event.buttons !== 0) return;
+          const index = indexFromClientX(event.clientX);
+          if (index == null) return;
+          onSelect(index);
+        }}
+        onPointerUp={(event) => {
+          if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+        }}
+        onPointerCancel={(event) => {
+          if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
         }}
       >
         {width > 0 ? (
@@ -470,13 +629,32 @@ function ActivityPlot({
                 strokeWidth={1}
               />
             ))}
-            <rect
-              x={selected * slot}
-              y={PAD_TOP}
-              width={slot}
-              height={PLOT_INNER}
-              className="fill-foreground/5"
-            />
+            {rangeSpan ? (
+              <rect
+                x={rangeSpan.start * slot}
+                y={PAD_TOP}
+                width={(rangeSpan.end - rangeSpan.start + 1) * slot}
+                height={PLOT_INNER}
+                className="fill-foreground/5"
+              />
+            ) : null}
+            {hoverIndex != null ? (
+              <rect
+                x={hoverIndex * slot}
+                y={PAD_TOP}
+                width={slot}
+                height={PLOT_INNER}
+                className="fill-foreground/10"
+              />
+            ) : !rangeSpan ? (
+              <rect
+                x={selected * slot}
+                y={PAD_TOP}
+                width={slot}
+                height={PLOT_INNER}
+                className="fill-foreground/5"
+              />
+            ) : null}
             <defs>
               {bars.map((bar, index) => {
                 if (bar.total <= 0) return null;
@@ -496,16 +674,26 @@ function ActivityPlot({
               const barWidth = Math.min(48, Math.max(3, slot * 0.72));
               const x = index * slot + (slot - barWidth) / 2;
               const bottom = y(0);
-              const split = y(bar.sentHeight);
+              const sentTop = y(bar.sentHeight);
+              const poolTop = y(bar.sentHeight + bar.poolHeight);
               return (
                 <g key={bar.start} clipPath={`url(#${clipPrefix}-${index})`}>
                   {bar.sentHeight > 0 ? (
                     <rect
                       x={x}
-                      y={split}
+                      y={sentTop}
                       width={barWidth}
-                      height={bottom - split}
+                      height={bottom - sentTop}
                       className="fill-green-500"
+                    />
+                  ) : null}
+                  {bar.poolHeight > 0 ? (
+                    <rect
+                      x={x}
+                      y={poolTop}
+                      width={barWidth}
+                      height={sentTop - poolTop}
+                      className="fill-purple-500"
                     />
                   ) : null}
                   {bar.deniedHeight > 0 ? (
@@ -513,7 +701,7 @@ function ActivityPlot({
                       x={x}
                       y={y(bar.total)}
                       width={barWidth}
-                      height={split - y(bar.total)}
+                      height={poolTop - y(bar.total)}
                       className="fill-red-500"
                     />
                   ) : null}
@@ -572,15 +760,39 @@ function topRoundedRect(
   ].join(" ");
 }
 
+function barHeights(
+  values: ActivityCounts,
+  mode: ActivityMode,
+  showSent: boolean,
+  showPool: boolean,
+  showDenied: boolean,
+): { sentHeight: number; poolHeight: number; deniedHeight: number } {
+  const poolHeight = showPool ? Math.max(0, values.pool) : 0;
+  const deniedHeight = showDenied ? Math.max(0, values.denied) : 0;
+  if (!showSent) return { sentHeight: 0, poolHeight, deniedHeight };
+  if (mode === "new") {
+    return { sentHeight: Math.max(0, values.sent), poolHeight, deniedHeight };
+  }
+  const sentHeight =
+    showPool && showDenied
+      ? values.open
+      : showPool
+        ? values.open + values.denied
+        : showDenied
+          ? values.sent - values.denied
+          : values.sent;
+  return { sentHeight: Math.max(0, sentHeight), poolHeight, deniedHeight };
+}
+
 function describePoint(
   point: ActivityPoint | undefined,
   grain: ActivityGrain,
-  values: { sent: number; denied: number },
+  values: ActivityCounts,
 ): string {
   if (!point) return "Application chart";
   const when =
     grain === "week"
       ? `Week of ${formatTrackDate(point.start)}`
       : formatTrackDate(point.through);
-  return `${when}. ${values.sent} applications sent, ${values.denied} denied.`;
+  return `${when}. ${values.sent} applications sent, ${values.pool} in the talent pool, ${values.denied} denied.`;
 }

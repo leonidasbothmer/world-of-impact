@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Archive, ArchiveRestore, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { ApplicationChartSection } from "@/components/application-chart";
+import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  ApplicationChartSection,
+  type ActivityDateRange,
+} from "@/components/application-chart";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { TextCell } from "@/components/org-table";
+import { FilterChip } from "@/components/filter-chip";
+import { TextCell, type CellSuggestion } from "@/components/org-table";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,10 +24,12 @@ import {
   readTrackState,
   calendarDate,
   formatTrackDate,
+  formatTrackDateRange,
   shownTrackStatus,
   trackClosedOn,
   type TrackStatus,
 } from "@/lib/tracking";
+import type { JobRow } from "@/lib/use-job-board";
 import { cn } from "@/lib/utils";
 import type { MindMapEdge, MindMapNode } from "@/types/mindmap";
 
@@ -45,6 +51,8 @@ type JobTrackerProps = {
   onSetRole: (id: string, role: string) => void;
   onSetDate: (id: string, field: "appliedOn" | "closedOn", value: string) => void;
   onPatchLink: (id: string, patch: TrackerLinkPatch) => void;
+  /** Open roles scraped from career pages, used to suggest a position. */
+  jobs?: JobRow[];
 };
 
 function initials(name: string): string {
@@ -145,11 +153,22 @@ export function JobTracker({
   onSetRole,
   onSetDate,
   onPatchLink,
+  jobs = [],
 }: JobTrackerProps) {
   const [query, setQuery] = useState("");
+  const [dateRange, setDateRange] = useState<ActivityDateRange | null>(null);
+  const [statuses, setStatuses] = useState<TrackStatus[]>([]);
   const [addQuery, setAddQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
+
+  function applyDateRange(next: ActivityDateRange | null) {
+    setDateRange((current) => {
+      if (next == null) return current == null ? current : null;
+      if (current && current.from === next.from && current.to === next.to) return current;
+      return next;
+    });
+  }
 
   function setStatus(id: string, status: TrackStatus) {
     onSetStatus(id, status);
@@ -172,6 +191,29 @@ export function JobTracker({
     () => connectedPeople(nodes, edges),
     [nodes, edges],
   );
+  const jobsByOrg = useMemo(() => {
+    const grouped = new Map<string, CellSuggestion[]>();
+    const lists = new Map<string, JobRow[]>();
+    for (const job of jobs) {
+      const list = lists.get(job.organizationId) ?? [];
+      list.push(job);
+      lists.set(job.organizationId, list);
+    }
+    for (const [id, list] of lists) {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+      grouped.set(
+        id,
+        list.map((job) => ({
+          id: job.id,
+          label: job.title,
+          company: job.organizationName || undefined,
+          detail: [job.location, job.department].filter(Boolean).join(" · ") || undefined,
+          value: job.url,
+        })),
+      );
+    }
+    return grouped;
+  }, [jobs]);
 
   const needle = query.trim().toLowerCase();
   function matchesQuery(node: MindMapNode) {
@@ -181,8 +223,15 @@ export function JobTracker({
       (node.linkedIn ?? "").toLowerCase().includes(needle)
     );
   }
-  const orgRows = organizations.active.filter(matchesQuery);
-  const archivedRows = organizations.archived.filter(matchesQuery);
+  function matchesFilters(node: MindMapNode) {
+    return (
+      matchesQuery(node) &&
+      matchesTrackDate(node, dateRange) &&
+      matchesTrackStatus(node, statuses)
+    );
+  }
+  const orgRows = organizations.active.filter(matchesFilters);
+  const archivedRows = organizations.archived.filter(matchesFilters);
 
   const addNeedle = addQuery.trim().toLowerCase();
   const addMatches = useMemo(() => {
@@ -272,14 +321,18 @@ export function JobTracker({
               </ul>
             ) : null}
           </div>
-        <div className="ml-auto w-48">
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter by name"
-            aria-label="Filter tracked organizations by name"
-            className="h-6 text-xs"
-          />
+        <div className="ml-auto flex items-center gap-1">
+          <StatusFilter value={statuses} onChange={setStatuses} />
+          <DateRangeFilter value={dateRange} onChange={applyDateRange} />
+          <div className="ml-1 w-48">
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Filter by name"
+              aria-label="Filter tracked organizations by name"
+              className="h-6 text-xs"
+            />
+          </div>
         </div>
       </div>
 
@@ -320,7 +373,7 @@ export function JobTracker({
                 >
                   {organizations.active.length + organizations.archived.length === 0
                     ? "Nothing tracked yet. Add an organization above."
-                    : needle
+                    : needle || dateRange || statuses.length > 0
                       ? "No organizations match this filter."
                       : "No open applications."}
                 </td>
@@ -339,6 +392,7 @@ export function JobTracker({
                   onSetRole={onSetRole}
                   onSetDate={onSetDate}
                   people={peopleByOrg.get(node.id) ?? []}
+                  suggestions={jobsByOrg.get(node.id) ?? []}
                   onCommitLinkedIn={(value) => {
                     void commitLinkedIn(node.id, value);
                   }}
@@ -380,6 +434,7 @@ export function JobTracker({
                     onSetRole={onSetRole}
                     onSetDate={onSetDate}
                     people={peopleByOrg.get(node.id) ?? []}
+                    suggestions={jobsByOrg.get(node.id) ?? []}
                     onCommitLinkedIn={(value) => {
                       void commitLinkedIn(node.id, value);
                     }}
@@ -389,7 +444,11 @@ export function JobTracker({
           </tbody>
         </table>
       </div>
-      <ApplicationChartSection nodes={nodes} />
+      <ApplicationChartSection
+        nodes={nodes}
+        dateRange={dateRange}
+        onDateRange={applyDateRange}
+      />
     </div>
   );
 }
@@ -399,6 +458,7 @@ function TrackerRow({
   selected,
   archived,
   people,
+  suggestions,
   onOpenOnGraph,
   onSetTracked,
   onSetStatus,
@@ -411,6 +471,7 @@ function TrackerRow({
   selected: boolean;
   archived: boolean;
   people: MindMapNode[];
+  suggestions: CellSuggestion[];
   onOpenOnGraph: (id: string) => void;
   onSetTracked: (id: string, tracked: boolean) => void;
   onSetStatus: (id: string, status: TrackStatus) => void;
@@ -510,6 +571,7 @@ function TrackerRow({
           link={Boolean(roleHref(role))}
           value={role}
           compact
+          suggestions={suggestions}
           onCommit={(value) => onSetRole(node.id, value)}
         />
       <TrackDateCell
@@ -625,6 +687,381 @@ function sameDay(a: Date, b: Date) {
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
+  );
+}
+
+function orderedRange(range: ActivityDateRange): ActivityDateRange {
+  return range.from <= range.to ? range : { from: range.to, to: range.from };
+}
+
+function matchesTrackStatus(node: MindMapNode, statuses: TrackStatus[]): boolean {
+  if (statuses.length === 0) return true;
+  const state = readTrackState(node);
+  if (!state) return false;
+  return statuses.includes(shownTrackStatus(state));
+}
+
+/** Applied day, denial day, or the closed date shown on the row. */
+function matchesTrackDate(node: MindMapNode, range: ActivityDateRange | null): boolean {
+  if (!range) return true;
+  const state = readTrackState(node);
+  if (!state) return false;
+  const { from, to } = orderedRange(range);
+  return [state.appliedOn, state.deniedOn, trackClosedOn(state)].some(
+    (iso) => Boolean(iso && iso >= from && iso <= to),
+  );
+}
+
+function statusFilterLabel(statuses: TrackStatus[]): ReactNode {
+  const selected = TRACK_STATUSES.filter((item) => statuses.includes(item.value));
+  if (selected.length === 0) return "Status";
+  if (selected.length === 1) {
+    return (
+      <>
+        <span className={cn("size-1.5 rounded-full", selected[0].dot)} />
+        {selected[0].label}
+      </>
+    );
+  }
+  return selected.map((item) => item.label).join(", ");
+}
+
+function StatusFilter({
+  value,
+  onChange,
+}: {
+  value: TrackStatus[];
+  onChange: (value: TrackStatus[]) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [box, setBox] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function place() {
+      const next = buttonRef.current?.getBoundingClientRect();
+      if (next) setBox(next);
+    }
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  const placeAbove = box != null && box.bottom + 220 > window.innerHeight && box.top > 220;
+  const summary = statusFilterLabel(value);
+  const summaryText =
+    value.length === 0
+      ? "Status"
+      : TRACK_STATUSES.filter((item) => value.includes(item.value))
+          .map((item) => item.label)
+          .join(", ");
+
+  function toggleStatus(status: TrackStatus) {
+    onChange(
+      value.includes(status)
+        ? value.filter((item) => item !== status)
+        : [...value, status],
+    );
+  }
+
+  return (
+    <>
+      <FilterChip
+        pressed={value.length > 0}
+        open={open}
+        label={summary}
+        ariaLabel={value.length > 0 ? `Status filter, ${summaryText}` : "Filter by status"}
+        title={value.length > 1 ? summaryText : undefined}
+        buttonRef={buttonRef}
+        clearLabel="Clear status filter"
+        onClick={() => {
+          setBox(buttonRef.current?.getBoundingClientRect() ?? null);
+          setOpen((current) => !current);
+        }}
+        onClear={value.length > 0 ? () => {
+          onChange([]);
+          setOpen(false);
+        } : undefined}
+      />
+      {open && box
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-label="Filter by status"
+              className="fixed z-50 w-40 rounded-md border bg-popover p-1 text-xs text-popover-foreground shadow-md"
+              style={{
+                left: Math.max(8, Math.min(box.left, window.innerWidth - 168)),
+                top: placeAbove ? box.top - 4 : box.bottom + 4,
+                transform: placeAbove ? "translateY(-100%)" : undefined,
+              }}
+            >
+              {TRACK_STATUSES.map((item) => {
+                const selected = value.includes(item.value);
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left hover:bg-muted",
+                      selected && "bg-muted",
+                    )}
+                    onClick={() => toggleStatus(item.value)}
+                  >
+                    <span className={cn("size-1.5 rounded-full", item.dot)} />
+                    <span className="flex-1">{item.label}</span>
+                    {selected ? <Check className="size-3 text-muted-foreground" /> : null}
+                  </button>
+                );
+              })}
+              {value.length > 0 ? (
+                <button
+                  type="button"
+                  className="mt-1 w-full rounded-sm border-t px-2 py-1.5 text-left text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => {
+                    onChange([]);
+                    setOpen(false);
+                  }}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function DateRangeFilter({
+  value,
+  onChange,
+}: {
+  value: ActivityDateRange | null;
+  onChange: (value: ActivityDateRange | null) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [box, setBox] = useState<DOMRect | null>(null);
+  const [anchor, setAnchor] = useState<string | null>(null);
+  const [hover, setHover] = useState<string | null>(null);
+  const [month, setMonth] = useState(() => {
+    const initial = parseCalendarDate(value?.from) ?? new Date();
+    return new Date(initial.getFullYear(), initial.getMonth(), 1);
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    function place() {
+      const next = buttonRef.current?.getBoundingClientRect();
+      if (next) setBox(next);
+    }
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
+      setAnchor(null);
+      setHover(null);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setAnchor(null);
+        setHover(null);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  const days = useMemo(() => monthCells(month), [month]);
+  const today = new Date();
+  const preview = anchor
+    ? orderedRange({ from: anchor, to: hover ?? anchor })
+    : value
+      ? orderedRange(value)
+      : null;
+  const placeAbove = box != null && box.bottom + 248 > window.innerHeight && box.top > 248;
+  const label = value ? formatTrackDateRange(value.from, value.to) : "Date";
+
+  function toggle() {
+    const initial = parseCalendarDate(value?.from) ?? new Date();
+    setMonth(new Date(initial.getFullYear(), initial.getMonth(), 1));
+    setAnchor(null);
+    setHover(null);
+    setBox(buttonRef.current?.getBoundingClientRect() ?? null);
+    setOpen((current) => !current);
+  }
+
+  function choose(date: Date) {
+    const iso = calendarDate(date);
+    if (!anchor) {
+      setAnchor(iso);
+      onChange({ from: iso, to: iso });
+      return;
+    }
+    onChange(orderedRange({ from: anchor, to: iso }));
+    setAnchor(null);
+    setHover(null);
+    setOpen(false);
+  }
+
+  function clear() {
+    onChange(null);
+    setAnchor(null);
+    setHover(null);
+    setOpen(false);
+  }
+
+  const panelLeft =
+    box == null ? 0 : Math.max(8, Math.min(box.left, window.innerWidth - 200));
+
+  return (
+    <>
+      <FilterChip
+        pressed={value != null}
+        open={open}
+        label={label}
+        ariaLabel={value ? `Date filter, ${label}` : "Filter by date"}
+        title={value ? label : undefined}
+        buttonRef={buttonRef}
+        clearLabel="Clear date filter"
+        onClick={toggle}
+        onClear={value ? clear : undefined}
+      />
+      {open && box
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-label="Filter by date"
+              className="fixed z-50 w-48 rounded-md border bg-popover p-1.5 text-xs text-popover-foreground shadow-md"
+              style={{
+                left: panelLeft,
+                top: placeAbove ? box.top - 4 : box.bottom + 4,
+                transform: placeAbove ? "translateY(-100%)" : undefined,
+              }}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Previous month"
+                  onClick={() =>
+                    setMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))
+                  }
+                >
+                  <ChevronLeft className="size-3.5" />
+                </button>
+                <span className="text-xs font-medium">
+                  {MONTH_NAMES[month.getMonth()]} {month.getFullYear()}
+                </span>
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Next month"
+                  onClick={() =>
+                    setMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))
+                  }
+                >
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted-foreground">
+                {WEEKDAYS.map((day) => (
+                  <span key={day} className="py-1">
+                    {day}
+                  </span>
+                ))}
+              </div>
+              <div
+                className="grid grid-cols-7 gap-0.5"
+                onMouseLeave={() => setHover(null)}
+              >
+                {days.map((date) => {
+                  const iso = calendarDate(date);
+                  const inMonth = date.getMonth() === month.getMonth();
+                  const inSpan = preview != null && iso >= preview.from && iso <= preview.to;
+                  const isEnd = preview != null && (iso === preview.from || iso === preview.to);
+                  const isToday = sameDay(date, today);
+                  return (
+                    <button
+                      key={iso}
+                      type="button"
+                      className={cn(
+                        "h-6 rounded-md text-[11px]",
+                        !isEnd && (inMonth ? "text-foreground" : "text-muted-foreground/50"),
+                        isEnd && "bg-foreground text-background",
+                        inSpan && !isEnd && "bg-muted",
+                        !inSpan && "hover:bg-muted",
+                        isToday && !isEnd && "ring-1 ring-foreground/30",
+                      )}
+                      onMouseEnter={() => {
+                        if (anchor) setHover(iso);
+                      }}
+                      onClick={() => choose(date)}
+                    >
+                      {date.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t pt-2">
+                <button
+                  type="button"
+                  className="rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => {
+                    const now = new Date();
+                    setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                    onChange({ from: calendarDate(now), to: calendarDate(now) });
+                    setAnchor(null);
+                    setHover(null);
+                    setOpen(false);
+                  }}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={clear}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 

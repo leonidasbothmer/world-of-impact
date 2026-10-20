@@ -143,7 +143,7 @@ export function AddNodeForm({
         <div
           role="dialog"
           aria-label="Add a node"
-          className="absolute right-0 top-full z-50 mt-2 w-80 max-h-[min(32rem,70vh)] overflow-y-auto rounded-lg border bg-popover p-3 text-popover-foreground shadow-lg"
+          className="absolute left-0 top-full z-50 mt-2 w-80 max-h-[min(32rem,70vh)] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border bg-popover p-3 text-popover-foreground shadow-lg"
         >
           <p className="mb-3 text-sm font-medium">Add a node</p>
           <form onSubmit={handleSubmit} className="space-y-3">

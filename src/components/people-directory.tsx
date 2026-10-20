@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { NodeRowMarks } from "@/components/node-row-marks";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { describeLink } from "@/lib/link-display";
+import { isHidden } from "@/lib/node-hide";
 import { cn } from "@/lib/utils";
 import type { MindMapEdge, MindMapNode } from "@/types/mindmap";
 
@@ -11,6 +14,7 @@ type PeopleDirectoryProps = {
   edges: MindMapEdge[];
   selectedNodeId: string | null;
   onOpenOnGraph: (id: string) => void;
+  onShowHidden?: (id: string) => void;
 };
 
 function initials(name: string): string {
@@ -56,8 +60,10 @@ export function PeopleDirectory({
   edges,
   selectedNodeId,
   onOpenOnGraph,
+  onShowHidden,
 }: PeopleDirectoryProps) {
   const [query, setQuery] = useState("");
+  const [includeHidden, setIncludeHidden] = useState(false);
   const organizations = useMemo(
     () => organizationsByPerson(nodes, edges),
     [nodes, edges],
@@ -69,9 +75,13 @@ export function PeopleDirectory({
         .sort((a, b) => a.name.localeCompare(b.name)),
     [nodes],
   );
+  const hiddenCount = people.filter((person) => isHidden(person)).length;
+  const listed = people.filter(
+    (person) => includeHidden || !isHidden(person),
+  );
   const needle = query.trim().toLowerCase();
   const rows = needle
-    ? people.filter((person) => {
+    ? listed.filter((person) => {
         const orgs = organizations.get(person.id) ?? [];
         return (
           person.name.toLowerCase().includes(needle) ||
@@ -80,17 +90,28 @@ export function PeopleDirectory({
           orgs.some((org) => org.name.toLowerCase().includes(needle))
         );
       })
-    : people;
+    : listed;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
         <h2 className="text-xs font-medium">People</h2>
         <span className="text-xs text-muted-foreground">
-          {rows.length === people.length
-            ? people.length
-            : `${rows.length} of ${people.length}`}
+          {rows.length === listed.length
+            ? listed.length
+            : `${rows.length} of ${listed.length}`}
         </span>
+        <Button
+          type="button"
+          size="xs"
+          variant={includeHidden ? "secondary" : "outline"}
+          aria-pressed={includeHidden}
+          title="Include people hidden on the graph"
+          onClick={() => setIncludeHidden((current) => !current)}
+        >
+          Hidden
+          <span className="text-muted-foreground">{hiddenCount}</span>
+        </Button>
         <div className="ml-auto w-48">
           <Input
             value={query}
@@ -109,6 +130,7 @@ export function PeopleDirectory({
             <col />
             <col style={{ width: "24%" }} />
             <col style={{ width: "22%" }} />
+            <col style={{ width: "2.5rem" }} />
           </colgroup>
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b text-left text-xs text-muted-foreground">
@@ -116,18 +138,23 @@ export function PeopleDirectory({
               <th className="px-2 py-1.5 font-medium">Organizations</th>
               <th className="px-2 py-1.5 font-medium">Email</th>
               <th className="px-2 py-1.5 font-medium">LinkedIn</th>
+              <th className="px-2 py-1.5 font-medium">
+                <span className="sr-only">Marks</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="px-3 py-8 text-center text-xs text-muted-foreground"
                 >
                   {people.length === 0
                     ? "No people yet."
-                    : "No people match this filter."}
+                    : listed.length === 0
+                      ? "Every person is hidden on the graph."
+                      : "No people match this filter."}
                 </td>
               </tr>
             ) : (
@@ -195,6 +222,14 @@ export function PeopleDirectory({
                       ) : (
                         person.linkedIn
                       )}
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      <NodeRowMarks
+                        node={person}
+                        onShow={
+                          onShowHidden ? () => onShowHidden(person.id) : undefined
+                        }
+                      />
                     </td>
                   </tr>
                 );

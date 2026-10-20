@@ -1,16 +1,31 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, SquareArrowOutUpRight, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Loader2, Plus, Search, SquareArrowOutUpRight, X } from "lucide-react";
+import {
+  requestCompanyLookup,
+  type CompanyProfile,
+} from "@/lib/company-fill";
+import { NodeRowMarks } from "@/components/node-row-marks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocationSuggestInput } from "@/components/location-suggest-input";
 import { describeLink } from "@/lib/link-display";
+import { isHidden } from "@/lib/node-hide";
 import { appendLocation, collectLocations } from "@/lib/locations";
 import { useLinkTitle } from "@/lib/use-link-title";
 import { cn } from "@/lib/utils";
 import type { MindMapNode } from "@/types/mindmap";
+
+export type CellSuggestion = {
+  id: string;
+  label: string;
+  company?: string;
+  detail?: string;
+  value: string;
+};
 
 type OrgTextKey = "orgKind" | "website" | "careerPage" | "orgEmail" | "linkedIn";
 
@@ -35,7 +50,9 @@ type OrgTableProps = {
     update: (current: string[]) => string[],
   ) => void;
   onPatchField: (id: string, key: OrgTextKey, value: string) => void;
+  onApplyCompany?: (id: string, profile: CompanyProfile) => string;
   onOpenOnGraph: (id: string) => void;
+  onShowHidden?: (id: string) => void;
 };
 
 function SiteFavicon({ host, compact }: { host: string; compact?: boolean }) {
@@ -71,13 +88,19 @@ export function OrgTable({
   selectedNodeId,
   onChangeLocations,
   onPatchField,
+  onApplyCompany,
   onOpenOnGraph,
+  onShowHidden,
 }: OrgTableProps) {
   const [missingOnly, setMissingOnly] = useState(false);
+  const [includeHidden, setIncludeHidden] = useState(false);
   const [query, setQuery] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [focusId, setFocusId] = useState<string | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [lookupId, setLookupId] = useState<string | null>(null);
+  const [lookupNote, setLookupNote] = useState<Record<string, string>>({});
+  const lookupLock = useRef(false);
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
   const locationCatalog = useMemo(() => collectLocations(nodes), [nodes]);
@@ -93,9 +116,13 @@ export function OrgTable({
   const missingCount = organizations.filter(
     (node) => (node.locations?.length ?? 0) === 0,
   ).length;
+  const hiddenCount = organizations.filter((node) => isHidden(node)).length;
+  const listed = organizations.filter(
+    (node) => includeHidden || !isHidden(node),
+  );
 
   const needle = query.trim().toLowerCase();
-  const rows = organizations.filter((node) => {
+  const rows = listed.filter((node) => {
     if (missingOnly && (node.locations?.length ?? 0) > 0) return false;
     if (needle && !node.name.toLowerCase().includes(needle)) return false;
     return true;
@@ -106,6 +133,30 @@ export function OrgTable({
     inputRefs.current.get(focusId)?.focus();
     setFocusId(null);
   }, [focusId]);
+
+  async function lookUp(node: MindMapNode) {
+    if (!onApplyCompany || lookupLock.current) return;
+    lookupLock.current = true;
+    setLookupId(node.id);
+    try {
+      const result = await requestCompanyLookup({
+        name: node.name,
+        website: node.website,
+      });
+      const message = result.ok
+        ? onApplyCompany(node.id, result.profile)
+        : result.error;
+      setLookupNote((prev) => ({ ...prev, [node.id]: message }));
+    } catch {
+      setLookupNote((prev) => ({
+        ...prev,
+        [node.id]: "Could not look up that company.",
+      }));
+    } finally {
+      lookupLock.current = false;
+      setLookupId(null);
+    }
+  }
 
   function setDraft(id: string, value: string) {
     setDrafts((prev) => ({ ...prev, [id]: value }));
@@ -142,17 +193,17 @@ export function OrgTable({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
-        <h2 className="text-sm font-medium">Organizations</h2>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5">
+        <h2 className="text-xs font-medium">Organizations</h2>
         <span className="text-xs text-muted-foreground">
-          {rows.length === organizations.length
-            ? organizations.length
-            : `${rows.length} of ${organizations.length}`}
+          {rows.length === listed.length
+            ? listed.length
+            : `${rows.length} of ${listed.length}`}
         </span>
         <Button
           type="button"
-          size="sm"
+          size="xs"
           variant={missingOnly ? "secondary" : "outline"}
           aria-pressed={missingOnly}
           onClick={() => setMissingOnly((current) => !current)}
@@ -160,42 +211,68 @@ export function OrgTable({
           Missing location
           <span className="text-muted-foreground">{missingCount}</span>
         </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant={includeHidden ? "secondary" : "outline"}
+          aria-pressed={includeHidden}
+          title="Include organizations hidden on the graph"
+          onClick={() => setIncludeHidden((current) => !current)}
+        >
+          Hidden
+          <span className="text-muted-foreground">{hiddenCount}</span>
+        </Button>
         <div className="ml-auto w-48">
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter by name"
             aria-label="Filter organizations by name"
-            className="h-7 text-xs"
+            className="h-6 text-xs"
           />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-[1100px] border-collapse text-sm">
+        <table className="w-full min-w-[920px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col style={{ width: "16%" }} />
+            <col />
+            <col style={{ width: "7.5rem" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "2.5rem" }} />
+          </colgroup>
           <thead className="sticky top-0 z-10 bg-background">
             <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="w-[16%] px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Locations</th>
+              <th className="px-3 py-1.5 font-medium">Name</th>
+              <th className="px-2 py-1.5 font-medium">Locations</th>
               {TEXT_FIELDS.map((field) => (
-                <th key={field.key} className="w-[14%] px-2 py-2 font-medium">
+                <th key={field.key} className="px-2 py-1.5 font-medium">
                   {field.label}
                 </th>
               ))}
+              <th className="px-2 py-1.5 font-medium">
+                <span className="sr-only">Marks</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={2 + TEXT_FIELDS.length}
-                  className="px-3 py-10 text-center text-sm text-muted-foreground"
+                  colSpan={3 + TEXT_FIELDS.length}
+                  className="px-3 py-8 text-center text-xs text-muted-foreground"
                 >
                   {organizations.length === 0
                     ? "No organizations yet."
-                    : missingOnly && !needle
-                      ? "Every organization has a location."
-                      : "No organizations match this filter."}
+                    : listed.length === 0
+                      ? "Every organization is hidden on the graph."
+                      : missingOnly && !needle
+                        ? "Every organization has a location."
+                        : "No organizations match this filter."}
                 </td>
               </tr>
             ) : (
@@ -206,21 +283,48 @@ export function OrgTable({
                   <tr
                     key={node.id}
                     className={cn(
-                      "border-b align-top",
+                      "border-b",
                       node.id === selectedNodeId && "bg-muted/50",
                     )}
                   >
-                    <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        className="text-left font-medium hover:underline"
-                        onClick={() => onOpenOnGraph(node.id)}
-                      >
-                        {node.name}
-                      </button>
+                    <td className="px-3 py-1.5">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate text-left font-medium hover:underline"
+                          onClick={() => onOpenOnGraph(node.id)}
+                        >
+                          {node.name}
+                        </button>
+                        {onApplyCompany ? (
+                          <Button
+                            type="button"
+                            size="icon-xs"
+                            variant="ghost"
+                            aria-label={`Look up ${node.name}`}
+                            title="Fill website, career page, and logo"
+                            disabled={lookupId !== null}
+                            onClick={() => void lookUp(node)}
+                          >
+                            {lookupId === node.id ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <Search />
+                            )}
+                          </Button>
+                        ) : null}
+                      </div>
+                      {lookupNote[node.id] ? (
+                        <p
+                          className="truncate text-[10px] text-muted-foreground"
+                          title={lookupNote[node.id]}
+                        >
+                          {lookupNote[node.id]}
+                        </p>
+                      ) : null}
                     </td>
                     <td
-                      className="px-3 py-1.5"
+                      className="px-2 py-1.5"
                       onMouseDown={(event) => {
                         const target = event.target as HTMLElement;
                         if (target.closest("button, input")) return;
@@ -292,10 +396,19 @@ export function OrgTable({
                         name={node.name}
                         placeholder={field.placeholder}
                         link={field.link}
+                        compact
                         value={node[field.key] ?? ""}
                         onCommit={(value) => onPatchField(node.id, field.key, value)}
                       />
                     ))}
+                    <td className="px-2 py-1.5 text-right">
+                      <NodeRowMarks
+                        node={node}
+                        onShow={
+                          onShowHidden ? () => onShowHidden(node.id) : undefined
+                        }
+                      />
+                    </td>
                   </tr>
                 );
               })
@@ -307,6 +420,22 @@ export function OrgTable({
   );
 }
 
+function matchingSuggestions(
+  suggestions: CellSuggestion[],
+  draft: string,
+  saved: string,
+): CellSuggestion[] {
+  const needle = draft.trim().toLowerCase();
+  const pool =
+    !needle || needle === saved.trim().toLowerCase()
+      ? suggestions
+      : suggestions.filter((item) => {
+          const haystack = `${item.label} ${item.company ?? ""} ${item.detail ?? ""}`.toLowerCase();
+          return haystack.includes(needle);
+        });
+  return pool.slice(0, 30);
+}
+
 export function TextCell({
   value,
   label,
@@ -315,6 +444,7 @@ export function TextCell({
   placeholder,
   link,
   compact = false,
+  suggestions,
   onCommit,
 }: {
   value: string;
@@ -324,14 +454,22 @@ export function TextCell({
   placeholder: string;
   link?: boolean;
   compact?: boolean;
+  suggestions?: CellSuggestion[];
   onCommit: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const [focused, setFocused] = useState(false);
   const [seenValue, setSeenValue] = useState(value);
-  const skipCommit = useRef(false);
+  const [highlight, setHighlight] = useState(0);
+  const [armed, setArmed] = useState(false);
+  const [box, setBox] = useState<DOMRect | null>(null);
+  const skipCommit = useRef<"revert" | "keep" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const matches = suggestions ? matchingSuggestions(suggestions, draft, value) : [];
+  const suggestOpen = focused && matches.length > 0;
+  const activeIndex = Math.min(highlight, Math.max(matches.length - 1, 0));
 
   if (value !== seenValue) {
     setSeenValue(value);
@@ -353,9 +491,34 @@ export function TextCell({
     element.select();
   }, [editing]);
 
+  useEffect(() => {
+    const element = inputRef.current;
+    if (!suggestOpen || !element) return;
+    function place() {
+      const next = inputRef.current?.getBoundingClientRect();
+      if (next) setBox(next);
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [suggestOpen, matches.length]);
+
   function commit(raw: string) {
     const next = raw.trim();
     if (next !== value.trim()) onCommit(next);
+  }
+
+  function pickSuggestion(suggestion: CellSuggestion) {
+    skipCommit.current = "keep";
+    setDraft(suggestion.value);
+    commit(suggestion.value);
+    setEditing(false);
+    setFocused(false);
+    inputRef.current?.blur();
   }
 
   function focusNext(row: HTMLTableRowElement | null) {
@@ -413,15 +576,24 @@ export function TextCell({
             "w-full min-w-28 bg-transparent px-1 outline-none placeholder:text-muted-foreground focus:bg-muted/50",
             compact ? "h-6 text-xs" : "h-7 text-sm",
           )}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            setHighlight(0);
+            setArmed(false);
+          }}
           onFocus={() => {
             setFocused(true);
           }}
           onBlur={(event) => {
             setFocused(false);
-            if (skipCommit.current) {
-              skipCommit.current = false;
+            if (skipCommit.current === "revert") {
+              skipCommit.current = null;
               setDraft(value);
+              setEditing(false);
+              return;
+            }
+            if (skipCommit.current === "keep") {
+              skipCommit.current = null;
               setEditing(false);
               return;
             }
@@ -429,21 +601,97 @@ export function TextCell({
             setEditing(false);
           }}
           onKeyDown={(event) => {
+            if (suggestOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+              event.preventDefault();
+              const delta = event.key === "ArrowDown" ? 1 : -1;
+              if (!armed) {
+                setArmed(true);
+                setHighlight(delta === 1 ? 0 : matches.length - 1);
+                return;
+              }
+              setHighlight((current) => {
+                const index = Math.min(current, matches.length - 1);
+                return (index + delta + matches.length) % matches.length;
+              });
+              return;
+            }
             if (event.key === "Enter") {
               event.preventDefault();
+              const typed = event.currentTarget.value.trim().toLowerCase();
+              const exact = matches.filter((item) => item.label.toLowerCase() === typed);
+              const selected = exact.length === 1 ? exact[0] : armed ? matches[activeIndex] : undefined;
+              if (selected) {
+                pickSuggestion(selected);
+                return;
+              }
               const row = event.currentTarget.closest("tr");
               event.currentTarget.blur();
               focusNext(row);
               return;
             }
             if (event.key === "Escape") {
-              skipCommit.current = true;
+              skipCommit.current = "revert";
               setDraft(value);
               event.currentTarget.blur();
             }
           }}
         />
       )}
+      {suggestOpen && box
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="listbox"
+              aria-label={`Jobs for ${name}`}
+              className="fixed z-50 max-h-48 w-72 overflow-auto rounded-md border bg-popover p-1 text-xs text-popover-foreground shadow-md"
+              style={{
+                left: Math.max(8, Math.min(box.left, window.innerWidth - 296)),
+                top:
+                  box.bottom + 4 + 200 > window.innerHeight && box.top > 200
+                    ? box.top - 4
+                    : box.bottom + 4,
+                transform:
+                  box.bottom + 4 + 200 > window.innerHeight && box.top > 200
+                    ? "translateY(-100%)"
+                    : undefined,
+              }}
+            >
+              {matches.map((suggestion, index) => (
+                <button
+                  key={suggestion.id}
+                  type="button"
+                  role="option"
+                  aria-selected={armed && index === activeIndex}
+                  className={cn(
+                    "flex w-full flex-col items-start rounded-sm px-2 py-1.5 text-left hover:bg-muted",
+                    armed && index === activeIndex && "bg-muted",
+                  )}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => {
+                    setHighlight(index);
+                    setArmed(true);
+                  }}
+                  onClick={() => pickSuggestion(suggestion)}
+                >
+                  <span className="w-full truncate font-medium" title={suggestion.label}>
+                    {suggestion.label}
+                  </span>
+                  {suggestion.company ? (
+                    <span className="w-full truncate" title={suggestion.company}>
+                      {suggestion.company}
+                    </span>
+                  ) : null}
+                  {suggestion.detail ? (
+                    <span className="w-full truncate text-muted-foreground">
+                      {suggestion.detail}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )
+        : null}
     </td>
   );
 }

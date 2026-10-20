@@ -13,8 +13,12 @@ import {
 import { NodeSearch, type SearchCreateInput } from "@/components/node-search";
 import { isOrgSolutionPair, NodePanel } from "@/components/node-panel";
 import { JobTracker } from "@/components/job-tracker";
+import { JobsList } from "@/components/jobs-list";
 import { PeopleDirectory } from "@/components/people-directory";
 import { OrgTable } from "@/components/org-table";
+import { applyCompanyProfile, type CompanyProfile } from "@/lib/company-fill";
+import { withFlag, withoutFlag } from "@/lib/flags";
+import { withHidden } from "@/lib/node-hide";
 import { AddNodeForm } from "@/components/add-node-form";
 import { AccountMenu, type AccountProfile } from "@/components/account-menu";
 import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
@@ -31,6 +35,8 @@ import {
   withTracked,
   type TrackStatus,
 } from "@/lib/tracking";
+import { trackedJobMarks } from "@/lib/tracked-job";
+import { useJobBoard } from "@/lib/use-job-board";
 import { cn } from "@/lib/utils";
 import { fetchMindMap, patchMindMap } from "@/lib/mindmap-client";
 import type {
@@ -74,11 +80,16 @@ export function MindMapApp({
   const [hiddenTypes, setHiddenTypes] = useState<NodeType[]>([
     ...DEFAULT_HIDDEN_TYPES,
   ]);
-  const [view, setView] = useState<"graph" | "table" | "tracker" | "people">(
-    "graph",
-  );
+  const [view, setView] = useState<
+    "graph" | "table" | "jobs" | "tracker" | "people"
+  >("graph");
   const [focusIds, setFocusIds] = useState<string[]>([]);
   const [showFullGraph, setShowFullGraph] = useState(true);
+  const jobBoard = useJobBoard(data?.nodes ?? [], signedIn && data != null);
+  const jobMarks = useMemo(
+    () => trackedJobMarks(data?.nodes ?? []),
+    [data?.nodes],
+  );
   const hiddenTypeSet = useMemo(
     () => new Set(hiddenTypes),
     [hiddenTypes],
@@ -396,6 +407,22 @@ export function MindMapApp({
     commitTrackedNode(id, withTracked(node, tracked));
   }
 
+  function handleSetFlag(id: string, comment: string | null) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node) return;
+    commitTrackedNode(
+      id,
+      comment === null ? withoutFlag(node) : withFlag(node, comment),
+    );
+  }
+
+  function handleSetHidden(id: string, hidden: boolean) {
+    const node = dataRef.current?.nodes.find((item) => item.id === id);
+    if (!node) return;
+    commitTrackedNode(id, withHidden(node, hidden));
+    if (hidden && selectedNodeId === id) setSelectedNodeId(null);
+  }
+
   function handleSetTrackStatus(id: string, status: TrackStatus) {
     const node = dataRef.current?.nodes.find((item) => item.id === id);
     if (!node || node.type !== "organization") return;
@@ -496,6 +523,26 @@ export function MindMapApp({
       },
       { immediate: true, action: { action: "updateNode", node: nextNode } },
     );
+  }
+
+  function handleApplyCompany(id: string, profile: CompanyProfile): string {
+    const current = dataRef.current;
+    if (!current) return "Could not save.";
+    const node = current.nodes.find((item) => item.id === id);
+    if (!node || node.type !== "organization") return "Could not save.";
+    const applied = applyCompanyProfile(node, profile);
+    if (applied.filled.length === 0) return applied.message;
+    const nextNode = { ...applied.node, position: node.position };
+    commit(
+      {
+        ...current,
+        nodes: current.nodes.map((item) =>
+          item.id === id ? nextNode : item,
+        ),
+      },
+      { immediate: true, action: { action: "updateNode", node: nextNode } },
+    );
+    return applied.message;
   }
 
   function handleSaveNode(node: MindMapNode) {
@@ -862,6 +909,24 @@ export function MindMapApp({
               </button>
               <button
                 type="button"
+                aria-current={view === "jobs" ? "page" : undefined}
+                className={cn(
+                  "inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium",
+                  view === "jobs"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                onClick={() => setView("jobs")}
+              >
+                Jobs
+                {jobBoard.newCount > 0 ? (
+                  <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium text-white tabular-nums">
+                    {jobBoard.newCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
                 aria-current={view === "tracker" ? "page" : undefined}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-sm font-medium",
@@ -896,21 +961,11 @@ export function MindMapApp({
         className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1.5 md:px-4"
       >
         {canEdit ? (
-          <div className="flex items-center gap-1.5">
-            {dirty && (
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                Unsaved layout…
-              </span>
-            )}
-            {saving && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            )}
-            <AddNodeForm
-              nodes={data.nodes}
-              onAdd={handleAddNode}
-              onSelectExisting={handleSearchSelect}
-            />
-          </div>
+          <AddNodeForm
+            nodes={data.nodes}
+            onAdd={handleAddNode}
+            onSelectExisting={handleSearchSelect}
+          />
         ) : null}
 
         <NodeSearch
@@ -993,6 +1048,29 @@ export function MindMapApp({
           </button>
         </div>
 
+        {canEdit ? (
+          <span className="inline-grid shrink-0 items-center text-xs whitespace-nowrap text-muted-foreground">
+            <span
+              className="invisible col-start-1 row-start-1 inline-flex items-center gap-1.5"
+              aria-hidden
+            >
+              <span className="hidden sm:inline">Unsaved layout…</span>
+              <Loader2 className="h-4 w-4" />
+            </span>
+            <span
+              className="col-start-1 row-start-1 inline-flex items-center gap-1.5"
+              aria-live="polite"
+            >
+              {dirty ? (
+                <span className="hidden sm:inline">Unsaved layout…</span>
+              ) : null}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+            </span>
+          </span>
+        ) : null}
+
         {view === "graph" ? (
           <div
             className="ml-auto flex flex-wrap items-center justify-end gap-1.5"
@@ -1074,7 +1152,7 @@ export function MindMapApp({
         </main>
 
         {view === "table" ? (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <OrgTable
               nodes={data.nodes}
               selectedNodeId={selectedNodeId}
@@ -1082,7 +1160,9 @@ export function MindMapApp({
                 canEdit ? handleChangeLocations : () => undefined
               }
               onPatchField={canEdit ? handlePatchOrg : () => undefined}
+              onApplyCompany={canEdit ? handleApplyCompany : undefined}
               onOpenOnGraph={handleSearchSelect}
+              onShowHidden={canEdit ? (id) => handleSetHidden(id, false) : undefined}
             />
           </div>
         ) : null}
@@ -1093,6 +1173,18 @@ export function MindMapApp({
               nodes={data.nodes}
               edges={data.edges}
               selectedNodeId={selectedNodeId}
+              onOpenOnGraph={handleSearchSelect}
+              onShowHidden={canEdit ? (id) => handleSetHidden(id, false) : undefined}
+            />
+          </div>
+        ) : null}
+
+        {view === "jobs" ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <JobsList
+              board={jobBoard}
+              selectedNodeId={selectedNodeId}
+              jobMarks={jobMarks}
               onOpenOnGraph={handleSearchSelect}
             />
           </div>
@@ -1111,6 +1203,7 @@ export function MindMapApp({
               onSetRole={canEdit ? handleSetTrackRole : () => undefined}
               onSetDate={canEdit ? handleSetTrackDate : () => undefined}
               onPatchLink={canEdit ? handlePatchPerson : () => undefined}
+              jobs={jobBoard.rows}
             />
           </div>
         ) : null}
@@ -1134,6 +1227,16 @@ export function MindMapApp({
               onSetTracked={
                 canEdit
                   ? (tracked) => handleSetTracked(selectedNode.id, tracked)
+                  : undefined
+              }
+              onSetFlag={
+                canEdit
+                  ? (comment) => handleSetFlag(selectedNode.id, comment)
+                  : undefined
+              }
+              onSetHidden={
+                canEdit
+                  ? (hidden) => handleSetHidden(selectedNode.id, hidden)
                   : undefined
               }
               onDelete={handleDeleteNode}

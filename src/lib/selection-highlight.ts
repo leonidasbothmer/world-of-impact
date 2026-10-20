@@ -1,7 +1,7 @@
 import type { MindMapEdge } from "@/types/mindmap";
 
-export type NodeHighlight = "neighbor" | "endpoint";
-export type EdgeHighlight = "neighbor";
+export type NodeHighlight = "neighbor" | "path" | "endpoint";
+export type EdgeHighlight = "neighbor" | "path";
 
 export function neighborIds(
   selectedId: string | null,
@@ -55,7 +55,7 @@ export function nodeZIndex(
   highlight?: NodeHighlight,
 ): number {
   if (selected) return 10;
-  if (highlight === "endpoint") return 9;
+  if (highlight === "endpoint" || highlight === "path") return 9;
   if (highlight === "neighbor") return 8;
   return 0;
 }

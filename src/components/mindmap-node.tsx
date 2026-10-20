@@ -2,6 +2,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
+import { Flag } from "lucide-react";
+import { flagComment } from "@/lib/flags";
 import { cn } from "@/lib/utils";
 import { NODE_TYPE_CONFIG, PERSON_NODE_SIZE } from "@/lib/node-styles";
 import type { NodeHighlight } from "@/lib/selection-highlight";
@@ -16,8 +18,37 @@ function highlightRing(selected?: boolean, highlight?: NodeHighlight) {
   if (selected || highlight === "endpoint") {
     return "ring-2 ring-offset-1 ring-primary shadow-md";
   }
+  if (highlight === "path") return "ring-2 ring-offset-1 ring-primary";
   if (highlight === "neighbor") return "ring-2 ring-offset-1 ring-primary/30";
   return undefined;
+}
+
+function NodeFlag({
+  comment,
+  small = false,
+}: {
+  comment: string | null;
+  small?: boolean;
+}) {
+  if (comment == null) return null;
+  return (
+    <span
+      role="img"
+      aria-label={comment ? `Flag: ${comment}` : "Flagged"}
+      title={comment || "Flagged"}
+      className={cn(
+        "pointer-events-none absolute z-10 grid place-items-center rounded-full bg-background text-amber-500 shadow-sm ring-1 ring-amber-300 dark:text-amber-400 dark:ring-amber-700",
+        small ? "-top-1 -right-1 size-3" : "-top-1.5 -right-1.5 size-4",
+      )}
+    >
+      <Flag
+        className={small ? "size-2" : "size-2.5"}
+        fill="currentColor"
+        strokeWidth={2}
+        aria-hidden
+      />
+    </span>
+  );
 }
 
 function initialsFromName(name: string): string {
@@ -208,6 +239,7 @@ function AvatarTileNode({
           <DropTarget active={dropActive} />
           <ConnectionAnchors selected={selected} connectable={!!selected} />
         </div>
+        <NodeFlag comment={flagComment(node)} />
       </div>
       <p
         className={cn(
@@ -323,6 +355,7 @@ function PersonMoonNode({
           <DropTarget active={dropActive} />
           <ConnectionAnchors selected={selected} connectable={!!selected} />
         </div>
+        <NodeFlag comment={flagComment(node)} small />
       </div>
       <p
         className={cn(
@@ -377,6 +410,7 @@ function BoxedLabelNode({
       </p>
       <DropTarget active={dropActive} />
       <ConnectionAnchors selected={selected} connectable={!!selected} />
+      <NodeFlag comment={flagComment(node)} />
     </div>
   );
 }

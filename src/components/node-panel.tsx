@@ -1,17 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowRightLeft,
   Briefcase,
   Check,
+  Eye,
+  EyeOff,
+  Flag,
   Link2,
   Loader2,
   Locate,
   Pencil,
+  Search,
   Share2,
   X,
 } from "lucide-react";
+import { applyCompanyProfile, requestCompanyLookup } from "@/lib/company-fill";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +36,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LocationSuggestInput } from "@/components/location-suggest-input";
 import { appendLocation, collectLocations, normalizeLocation } from "@/lib/locations";
+import { flagComment, flagTags } from "@/lib/flags";
+import { HIDDEN_TAG, isHidden } from "@/lib/node-hide";
 import { isTracked, trackerTags, visibleTags } from "@/lib/tracking";
 import { NODE_TYPE_CONFIG } from "@/lib/node-styles";
 import { cn } from "@/lib/utils";
@@ -44,6 +52,8 @@ type NodePanelProps = {
   onSave: (node: MindMapNode) => void | Promise<void>;
   onLocate?: () => void;
   onSetTracked?: (tracked: boolean) => void;
+  onSetFlag?: (comment: string | null) => void;
+  onSetHidden?: (hidden: boolean) => void;
   onDelete: (id: string) => void;
   onAddEdge: (source: string, target: string, label?: string) => void;
   onDeleteEdge: (id: string) => void;
@@ -67,6 +77,12 @@ function splitTags(input: string): string[] {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function savedTags(input: string, existing: string[] | undefined): string[] {
+  const tags = [...splitTags(input), ...trackerTags(existing), ...flagTags(existing)];
+  if (existing?.includes(HIDDEN_TAG)) tags.push(HIDDEN_TAG);
+  return tags;
 }
 
 function sameList(left: string[] | undefined, right: string[] | undefined) {
@@ -113,6 +129,165 @@ function emptyDraft(): MindMapNode {
   };
 }
 
+function FlagControl({
+  node,
+  onSetFlag,
+}: {
+  node: MindMapNode;
+  onSetFlag: (comment: string | null) => void;
+}) {
+  const comment = flagComment(node);
+  const flagged = comment !== null;
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [place, setPlace] = useState<{ top: number; right: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  function placePopup() {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = 256;
+    const height = flagged ? 140 : 168;
+    const below = rect.bottom + 6;
+    const top =
+      below + height > window.innerHeight - 8
+        ? Math.max(8, rect.top - 6 - height)
+        : below;
+    const right = Math.max(8, window.innerWidth - rect.right);
+    const left = window.innerWidth - right - width;
+    setPlace({
+      top,
+      right: left < 8 ? Math.max(8, window.innerWidth - width - 8) : right,
+    });
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || popupRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setOpen(false);
+    }
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", placePopup);
+    window.addEventListener("scroll", placePopup, true);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", placePopup);
+      window.removeEventListener("scroll", placePopup, true);
+    };
+  }, [open, flagged]);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    if (!flagged) setDraft("");
+    placePopup();
+    setOpen(true);
+  }
+
+  function submit() {
+    onSetFlag(draft.trim());
+    setOpen(false);
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={flagged ? "View flag" : "Flag node"}
+        aria-pressed={flagged}
+        aria-expanded={open}
+        title={flagged ? "View flag" : "Flag node"}
+        className={cn(
+          "text-muted-foreground",
+          flagged && "text-amber-500 dark:text-amber-400",
+        )}
+        onClick={toggle}
+      >
+        <Flag className={cn(flagged && "fill-current")} />
+      </Button>
+      {open && place
+        ? createPortal(
+            <div
+              ref={popupRef}
+              role="dialog"
+              aria-label={flagged ? "Flag" : "Flag node"}
+              className="fixed z-50 w-64 rounded-lg border bg-background p-2 shadow-md"
+              style={{ top: place.top, right: place.right }}
+            >
+          {flagged ? (
+            <div className="flex items-start gap-1">
+              <p className="max-h-40 min-w-0 flex-1 overflow-y-auto px-1 py-0.5 text-sm whitespace-pre-wrap break-words">
+                {comment || (
+                  <span className="text-muted-foreground">No comment</span>
+                )}
+              </p>
+              <ConfirmDelete
+                label="Remove flag"
+                prompt="Unflag?"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-destructive"
+                onConfirm={() => {
+                  onSetFlag(null);
+                  setOpen(false);
+                }}
+              />
+            </div>
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit();
+              }}
+            >
+              <textarea
+                autoFocus
+                aria-label="Flag comment"
+                placeholder="Comment"
+                rows={3}
+                maxLength={500}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="w-full resize-none rounded-md border border-input bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+              <div className="mt-2 flex justify-end gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm">
+                  Flag
+                </Button>
+              </div>
+            </form>
+          )}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
 export function NodePanel({
   node,
   data,
@@ -122,6 +297,8 @@ export function NodePanel({
   onSave,
   onLocate,
   onSetTracked,
+  onSetFlag,
+  onSetHidden,
   onDelete,
   onAddEdge,
   onDeleteEdge,
@@ -138,6 +315,10 @@ export function NodePanel({
   const [nameDraft, setNameDraft] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [lookupPending, setLookupPending] = useState(false);
+  const [lookupMessage, setLookupMessage] = useState<string | null>(null);
+  const [lookupFor, setLookupFor] = useState<string | null>(null);
+  const lookupLock = useRef(false);
   const skipRenameCommit = useRef(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const seenNodeIdRef = useRef<string | null>(null);
@@ -218,7 +399,7 @@ export function NodePanel({
     const name = typeof nameOverride === "string" ? nameOverride : draft.name;
     const trimmed = name.trim();
     if (!trimmed) return;
-    const tags = [...splitTags(tagsInput), ...trackerTags(node.tags)];
+    const tags = savedTags(tagsInput, node.tags);
     const locations = locationsWithPending(draft.locations, locationDraft);
     const next: MindMapNode = {
       ...draft,
@@ -237,6 +418,54 @@ export function NodePanel({
       await onSave(next);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function lookUpCompany() {
+    if (!node || lookupLock.current || saving || !draft.name.trim()) return;
+    const requestId = node.id;
+    lookupLock.current = true;
+    setLookupFor(requestId);
+    setLookupPending(true);
+    setLookupMessage(null);
+    try {
+      const result = await requestCompanyLookup({
+        name: draft.name,
+        website: draft.website,
+      });
+      if (seenNodeIdRef.current !== requestId) return;
+      if (!result.ok) {
+        setLookupMessage(result.error);
+        return;
+      }
+      const applied = applyCompanyProfile(draft, result.profile);
+      setLookupMessage(applied.message);
+      if (applied.filled.length === 0) return;
+      const tags = savedTags(tagsInput, node.tags);
+      const locations = locationsWithPending(applied.node.locations, locationDraft);
+      const next: MindMapNode = {
+        ...applied.node,
+        name: draft.name.trim(),
+        tags,
+        locations,
+        position: node.position,
+      };
+      if (locations.length === 0) delete next.locations;
+      if (!next.careerPage?.trim()) delete next.careerPage;
+      setTagsInput(visibleTags(tags).join(", "));
+      setLocationDraft("");
+      setDraft(next);
+      setSaving(true);
+      try {
+        await onSave(next);
+      } catch {
+        setLookupMessage("Could not save the company details.");
+      } finally {
+        setSaving(false);
+      }
+    } finally {
+      lookupLock.current = false;
+      setLookupPending(false);
     }
   }
 
@@ -370,8 +599,32 @@ export function NodePanel({
                       <Briefcase className={cn(isTracked(node) && "fill-current")} />
                     </Button>
                   ) : null}
+                  {onSetHidden ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={isHidden(node) ? "Show on graph" : "Hide on graph"}
+                      aria-pressed={isHidden(node)}
+                      title={isHidden(node) ? "Show on graph" : "Hide on graph"}
+                      className={cn(
+                        "text-muted-foreground",
+                        isHidden(node) && "text-foreground",
+                      )}
+                      onClick={() => onSetHidden(!isHidden(node))}
+                    >
+                      {isHidden(node) ? <EyeOff /> : <Eye />}
+                    </Button>
+                  ) : null}
+                  {onSetFlag ? (
+                    <FlagControl
+                      key={`flag-${node.id}`}
+                      node={node}
+                      onSetFlag={onSetFlag}
+                    />
+                  ) : null}
                   <ConfirmDelete
-                    key={node.id}
+                    key={`delete-${node.id}`}
                     label="Delete node"
                     className="text-destructive hover:text-destructive"
                     onConfirm={() => onDelete(node.id)}
@@ -492,6 +745,32 @@ export function NodePanel({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Organization
               </p>
+              {!readOnly ? (
+                <div className="space-y-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={
+                      (lookupPending && lookupFor === node.id) ||
+                      saving ||
+                      !draft.name.trim()
+                    }
+                    onClick={() => void lookUpCompany()}
+                  >
+                    {lookupPending && lookupFor === node.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Search />
+                    )}
+                    Look up company
+                  </Button>
+                  {lookupFor === node.id && lookupMessage ? (
+                    <p className="text-xs text-muted-foreground">{lookupMessage}</p>
+                  ) : null}
+                </div>
+              ) : null}
               <LocationChips
                 locations={draft.locations ?? []}
                 draft={locationDraft}

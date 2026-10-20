@@ -1,3 +1,5 @@
+import { isFlagTag } from "@/lib/flags";
+import { HIDDEN_TAG } from "@/lib/node-hide";
 import type { MindMapNode } from "@/types/mindmap";
 
 /** Private tag. Membership in the job tracker, not a label on the shared graph. */
@@ -106,7 +108,9 @@ export function isTracked(node: MindMapNode): boolean {
 }
 
 export function visibleTags(tags: string[] | undefined): string[] {
-  return (tags ?? []).filter((tag) => !isTrackerTag(tag));
+  return (tags ?? []).filter(
+    (tag) => !isTrackerTag(tag) && !isFlagTag(tag) && tag !== HIDDEN_TAG,
+  );
 }
 
 export function trackerTags(tags: string[] | undefined): string[] {
@@ -122,7 +126,8 @@ function withTags(node: MindMapNode, tags: string[]): MindMapNode {
 }
 
 function replaceTrackerTags(node: MindMapNode, tracker: string[]): MindMapNode {
-  return withTags(node, [...visibleTags(node.tags), ...tracker]);
+  const kept = (node.tags ?? []).filter((tag) => !isTrackerTag(tag));
+  return withTags(node, [...kept, ...tracker]);
 }
 
 function isTrackStatus(value: string): value is TrackStatus {
@@ -193,6 +198,20 @@ export function formatTrackDate(iso: string): string {
   const day = Number(match[3]);
   if (!month || day < 1 || day > 31) return iso;
   return `${month} ${day}, ${match[1]}`;
+}
+
+/** Oct 12 – Oct 20, 2026. A single day stays one date. */
+export function formatTrackDateRange(from: string, to: string): string {
+  const start = from <= to ? from : to;
+  const end = from <= to ? to : from;
+  if (start === end) return formatTrackDate(start);
+  const startYear = start.slice(0, 4);
+  const endYear = end.slice(0, 4);
+  if (startYear === endYear) {
+    const short = formatTrackDate(start).replace(`, ${startYear}`, "");
+    return `${short} – ${formatTrackDate(end)}`;
+  }
+  return `${formatTrackDate(start)} – ${formatTrackDate(end)}`;
 }
 
 export function writeTrackState(node: MindMapNode, state: TrackState): MindMapNode {
@@ -328,12 +347,17 @@ export type ActivityPoint = {
   through: string;
   /** Applications sent on or before `through`. */
   sent: number;
-  /** Of those, how many were denied on or before `through`. */
+  /** Processes in the talent pool on or before `through`. */
+  pool: number;
+  /** Of the sent applications, how many were denied on or before `through`. */
   denied: number;
+  /** Sent on or before `through`, and neither pooled nor denied by then. */
+  open: number;
 };
 
 type ActivityEvent = {
-  sentOn: string;
+  sentOn?: string;
+  poolOn?: string;
   deniedOn?: string;
 };
 
@@ -373,31 +397,47 @@ function isoStamp(value: string | undefined): string | undefined {
 
 function activityEvent(state: TrackState): ActivityEvent | null {
   const sentOn = isoStamp(state.appliedOn);
-  if (!sentOn) return null;
-  const deniedOn = state.status === "denied"
-    ? isoStamp(state.deniedOn ?? state.closedOn ?? state.appliedOn)
-    : undefined;
-  if (!deniedOn) return { sentOn };
-  return { sentOn, deniedOn: deniedOn < sentOn ? sentOn : deniedOn };
+  let poolOn =
+    state.status === "pool"
+      ? isoStamp(state.closedOn ?? state.updatedOn ?? state.appliedOn)
+      : undefined;
+  let deniedOn =
+    state.status === "denied"
+      ? isoStamp(state.deniedOn ?? state.closedOn ?? state.appliedOn)
+      : undefined;
+  if (sentOn && poolOn && poolOn < sentOn) poolOn = sentOn;
+  if (sentOn && deniedOn && deniedOn < sentOn) deniedOn = sentOn;
+  if (!sentOn && !poolOn) return null;
+  return {
+    ...(sentOn ? { sentOn } : {}),
+    ...(poolOn ? { poolOn } : {}),
+    ...(deniedOn && sentOn ? { deniedOn } : {}),
+  };
 }
 
 function totalsThrough(
   events: ActivityEvent[],
   through: string,
-): { sent: number; denied: number } {
+): { sent: number; pool: number; denied: number; open: number } {
   let sent = 0;
+  let pool = 0;
   let denied = 0;
+  let open = 0;
   for (const event of events) {
-    if (event.sentOn > through) continue;
-    sent += 1;
-    if (event.deniedOn && event.deniedOn <= through) denied += 1;
+    const wasSent = Boolean(event.sentOn && event.sentOn <= through);
+    const wasPooled = Boolean(event.poolOn && event.poolOn <= through);
+    const wasDenied = Boolean(event.deniedOn && event.deniedOn <= through);
+    if (wasSent) sent += 1;
+    if (wasPooled) pool += 1;
+    if (wasDenied) denied += 1;
+    if (wasSent && !wasPooled && !wasDenied) open += 1;
   }
-  return { sent, denied };
+  return { sent, pool, denied, open };
 }
 
 /**
- * Cumulative applications sent, with denials dated separately.
- * Day points cover every calendar day from the first application through today.
+ * Cumulative applications sent, with talent-pool moves and denials dated separately.
+ * Day points cover every calendar day from the first event through today.
  * Week points are the same totals at the end of each Monday–Sunday week.
  */
 export function applicationActivity(
@@ -415,12 +455,14 @@ export function applicationActivity(
   }
   if (events.length === 0) return [];
 
-  let rangeStart = events[0].sentOn;
+  let rangeStart = events[0].sentOn ?? events[0].poolOn ?? calendarDate(now);
   let rangeEnd = calendarDate(now);
   for (const event of events) {
-    if (event.sentOn < rangeStart) rangeStart = event.sentOn;
-    if (event.sentOn > rangeEnd) rangeEnd = event.sentOn;
-    if (event.deniedOn && event.deniedOn > rangeEnd) rangeEnd = event.deniedOn;
+    for (const date of [event.sentOn, event.poolOn, event.deniedOn]) {
+      if (!date) continue;
+      if (date < rangeStart) rangeStart = date;
+      if (date > rangeEnd) rangeEnd = date;
+    }
   }
 
   if (grain === "week") {

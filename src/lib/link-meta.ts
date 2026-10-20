@@ -133,33 +133,90 @@ async function readLimited(response: Response, max: number): Promise<string> {
   return new TextDecoder().decode(merged);
 }
 
-async function readHtml(start: URL): Promise<string> {
+async function fetchPublic(
+  start: URL,
+  options: { maxBytes: number; accept: string; timeoutMs: number },
+): Promise<{ url: URL; body: string }> {
   let current = start;
   for (let hop = 0; hop < 4; hop++) {
     await assertPublic(current);
     const response = await fetch(current.href, {
       redirect: "manual",
       headers: {
-        Accept: "text/html,application/xhtml+xml",
+        Accept: options.accept,
         "User-Agent": "Mozilla/5.0 (compatible; LinkPreview/1.0)",
       },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(options.timeoutMs),
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
-      if (!location) return "";
+      if (!location) return { url: current, body: "" };
       const next = new URL(location, current);
-      if (next.protocol !== "http:" && next.protocol !== "https:") return "";
-      if (next.username || next.password) return "";
+      if (next.protocol !== "http:" && next.protocol !== "https:") {
+        return { url: current, body: "" };
+      }
+      if (next.username || next.password) return { url: current, body: "" };
       current = next;
       continue;
     }
-    if (!response.ok) return "";
+    if (!response.ok) return { url: current, body: "" };
     const type = response.headers.get("content-type") ?? "";
-    if (type && !/html|xml/i.test(type)) return "";
-    return readLimited(response, 80_000);
+    if (type && !/html|xml|json|rss|atom|text\/plain/i.test(type)) {
+      return { url: current, body: "" };
+    }
+    return { url: current, body: await readLimited(response, options.maxBytes) };
   }
-  return "";
+  return { url: current, body: "" };
+}
+
+async function readHtml(start: URL): Promise<string> {
+  const page = await fetchPublic(start, {
+    maxBytes: 80_000,
+    accept: "text/html,application/xhtml+xml",
+    timeoutMs: 6000,
+  });
+  return page.body;
+}
+
+/** Public http(s) document text. Empty when the host is blocked or the read fails. */
+export async function readPublicText(
+  raw: string,
+  options?: { maxBytes?: number; accept?: string; timeoutMs?: number },
+): Promise<string> {
+  const url = httpUrl(raw);
+  if (!url) return "";
+  try {
+    const page = await fetchPublic(url, {
+      maxBytes: options?.maxBytes ?? 80_000,
+      accept:
+        options?.accept ??
+        "text/html,application/xhtml+xml,application/xml,application/json,text/plain,*/*",
+      timeoutMs: options?.timeoutMs ?? 8000,
+    });
+    return page.body;
+  } catch {
+    return "";
+  }
+}
+
+/** Public page after redirects, or null when the host is blocked or the read fails. */
+export async function readPublicPage(
+  raw: string,
+  options?: { maxBytes?: number; accept?: string; timeoutMs?: number },
+): Promise<{ url: string; html: string } | null> {
+  const url = httpUrl(raw);
+  if (!url) return null;
+  try {
+    const page = await fetchPublic(url, {
+      maxBytes: options?.maxBytes ?? 400_000,
+      accept: options?.accept ?? "text/html,application/xhtml+xml",
+      timeoutMs: options?.timeoutMs ?? 8000,
+    });
+    if (!page.body.trim()) return null;
+    return { url: page.url.href, html: page.body };
+  } catch {
+    return null;
+  }
 }
 
 /** Page title for a public http(s) URL, or null when it can't be read. */

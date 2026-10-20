@@ -1,7 +1,12 @@
 import type { MindMapData, MindMapEdge, MindMapNode } from "@/types/mindmap";
+import { isFlagTag } from "@/lib/flags";
 
 /** Tags that belong on the private overlay, never the shared graph. */
-export const PRIVATE_TAGS = new Set(["contact", "contacted", "tracked"]);
+export const PRIVATE_TAGS = new Set(["contact", "contacted", "tracked", "hidden"]);
+
+export function isPrivateTag(tag: string): boolean {
+  return PRIVATE_TAGS.has(tag) || isFlagTag(tag);
+}
 
 export type PrivateContactFields = {
   orgEmail?: string;
@@ -39,8 +44,8 @@ export function stripPrivateFieldsFromSharedNode(
     ...rest
   } = node;
 
-  const publicTags = tags?.filter((t) => !PRIVATE_TAGS.has(t));
-  const privateTags = tags?.filter((t) => PRIVATE_TAGS.has(t));
+  const publicTags = tags?.filter((t) => !isPrivateTag(t));
+  const privateTags = tags?.filter((t) => isPrivateTag(t));
 
   const shared: MindMapNode = {
     ...rest,
